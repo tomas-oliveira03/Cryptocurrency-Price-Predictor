@@ -62,6 +62,7 @@ class RedditScraper:
     def processSubredditData(self, subreddit, sort="hot", pages=25, limit=100, after=None):            
         
         for page in range(pages):
+            addedPosts = 0
             
             params = {'limit': limit}
             if after:
@@ -85,6 +86,8 @@ class RedditScraper:
                 # Check if post was already processed, if it is ignore it
                 if self.mongoCollection.find_one({'id': redditPostId, 'subreddit': subreddit}):
                     continue
+            
+                addedPosts += 1
                 
                 post_document = {
                     'id': post['kind'] + '_' + data['id'],
@@ -99,7 +102,7 @@ class RedditScraper:
 
                 self.mongoCollection.insert_one(post_document)
 
-            print(f"Page {page+1} done. Inserted {len(posts)} posts.")
+            print(f"Page {page+1} done. Inserted {addedPosts} posts.")
             if not after:
                 print("No more pages.")
                 break
