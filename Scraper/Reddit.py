@@ -18,7 +18,7 @@ class RedditScraper:
 
         # Database connection
         mongoClient = MongoClient(mongoDBURI)
-        self.mongoCollection = mongoClient['reddit'].get_collection('posts', codec_options=CodecOptions(tz_aware=True))
+        self.mongoCollection = mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True))
 
         if not self.redditClientID or not self.redditSecretKey or not self.redditUsername or not self.redditPassword:
             raise ValueError("Please set the Reddit environment variables first.")
@@ -63,6 +63,7 @@ class RedditScraper:
         
         for page in range(pages):
             addedPosts = 0
+            updatedPosts = 0
             
             params = {'limit': limit}
             if after:
@@ -82,12 +83,7 @@ class RedditScraper:
                 redditPostId=post['kind']+'_'+post['data']['id']
                 
                 after=redditPostId
-                
-                # Check if post was already processed, if it is ignore it
-                if self.mongoCollection.find_one({'id': redditPostId, 'subreddit': subreddit}):
-                    continue
-            
-                addedPosts += 1
+                dateNow = datetime.datetime.now(datetime.timezone.utc)
                 
                 post_document = {
                     'id': post['kind'] + '_' + data['id'],
@@ -97,12 +93,34 @@ class RedditScraper:
                     'score': data['score'],
                     'created_at': created_date,
                     'num_comments': data['num_comments'],
-                    'scraped_at': datetime.datetime.now(datetime.timezone.utc)
+                    'scraped_at': dateNow
                 }
+
+                # Check if post was already processed, if it is ignore it
+                existingPost = self.mongoCollection.find_one({'id': redditPostId, 'subreddit': subreddit})
+                if existingPost:
+                    
+                    # If the post metadata hasn't changed, ignore it
+                    if existingPost['score'] == data['score'] and existingPost['num_comments'] == data['num_comments']:
+                        continue
+                    
+
+                    self.mongoCollection.update_one(
+                        {'id': redditPostId, 'subreddit': subreddit},
+                        {'$set': {
+                            'scraped_at': dateNow,
+                            'score': data['score'],
+                            'num_comments': data['num_comments']
+                        }}
+                    )
+                    updatedPosts += 1
+                    continue
+            
+                addedPosts += 1
 
                 self.mongoCollection.insert_one(post_document)
 
-            print(f"Page {page+1} done. Inserted {addedPosts} posts.")
+            print(f"Page {page+1} done. Inserted {addedPosts} posts, updated {updatedPosts} posts.")
             if not after:
                 print("No more pages.")
                 break
