@@ -8,11 +8,11 @@ from datetime import datetime
 class CryptoPrice:
     def __init__(self):
         load_dotenv()
-        self.coinDeskKey = os.getenv("COINDESK_KEY")
-        self.coinMarketCapKey = os.getenv('COINMARKETCAP_KEY')
+        self.coinDeskAPIKey = os.getenv("COINDESK_API_KEY")
+        self.coinMarketCapAPIKey = os.getenv('COINMARKETCAP_API_KEY')
         self.currencySymbol = "USD" 
     
-        if(not self.coinDeskKey or not self.coinMarketCapKey):
+        if(not self.coinDeskAPIKey or not self.coinMarketCapAPIKey):
             raise ValueError("Please set the COINDESK_KEY and COINMARKETCAP_KEY environment variables first.")
         
         mongoDBURI = os.getenv("MONGODB_URI")
@@ -34,7 +34,7 @@ class CryptoPrice:
 
         # Set the headers with the API key
         headers = {
-            "Authorization": f"Apikey {self.coinDeskKey}"
+            "Authorization": f"Apikey {self.coinDeskAPIKey}"
         }
 
         # Make the API request
@@ -83,7 +83,7 @@ class CryptoPrice:
     def getTop10Coins(self):
         url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
         headers = {
-            'X-CMC_PRO_API_KEY': self.coinMarketCapKey, 
+            'X-CMC_PRO_API_KEY': self.coinMarketCapAPIKey, 
             'Accept': 'application/json'
         }
 
