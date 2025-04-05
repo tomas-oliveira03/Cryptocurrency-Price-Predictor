@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
 import requests
 from datetime import datetime
@@ -6,7 +7,7 @@ import os
 
 class FearGreedIndex:
     def __init__(self):
-        self.apiUrl = "https://api.alternative.me/fng/?limit=365&format=json"
+        load_dotenv()
         
         mongoDBURI = os.getenv("MONGODB_URI")
         if not mongoDBURI:
@@ -17,7 +18,7 @@ class FearGreedIndex:
         self.mongoCollection = mongoClient['ASM'].get_collection('crypto-fear-greed', codec_options=CodecOptions(tz_aware=True))
 
     def fetchData(self):
-        response = requests.get(self.apiUrl)
+        response = requests.get("https://api.alternative.me/fng/?limit=365&format=json")
 
         if response.status_code == 200:
             rawData = response.json()["data"]

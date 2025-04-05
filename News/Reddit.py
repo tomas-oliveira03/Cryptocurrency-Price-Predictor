@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import requests
 import os
 import datetime
@@ -7,6 +8,7 @@ from bson.codec_options import CodecOptions
 class RedditScraper:
     
     def __init__(self):
+        load_dotenv()
         self.redditClientID = os.getenv("REDDIT_CLIENT_ID")
         self.redditSecretKey = os.getenv("REDDIT_SECRET_KEY")
         self.redditUsername = os.getenv("REDDIT_USERNAME")
