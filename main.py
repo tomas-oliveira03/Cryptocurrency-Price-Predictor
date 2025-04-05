@@ -1,4 +1,4 @@
-from Scraper import Reddit
+from News import Reddit
 from dotenv import load_dotenv
 
 
