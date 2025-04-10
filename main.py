@@ -5,9 +5,10 @@ import asyncio
 import os
 from dotenv import load_dotenv
 import spade
-from Orchestrators.GlobalOrchestrator import GlobalOrchestrator
-from Orchestrators.CryptoOrchestrator import CryptoOrchestrator
-from Orchestrators.NewsOrchestrator import NewsOrchestrator
+from Agents.Orchestrators.GlobalOrchestrator import GlobalOrchestratorAgent
+from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
+from Agents.Orchestrators.NewsOrchestrator import NewsOrchestratorAgent
+from Agents.Model.SentimentAnalysis import SentimentAnalysisAgent
 
 
 async def main():
@@ -20,10 +21,15 @@ async def main():
         raise ValueError("Please set the SPADE_DOMAIN and SPADE_PASSWORD environment variables first.")
     
     # Start agents
-    globalOrchestratorAgent = GlobalOrchestrator(f"globalOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
-    cryptoOrchestratorAgent = CryptoOrchestrator(f"cryptoOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
-    newsOrchestratorAgent = NewsOrchestrator(f"newsOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    globalOrchestratorAgent = GlobalOrchestratorAgent(f"globalOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    cryptoOrchestratorAgent = CryptoOrchestratorAgent(f"cryptoOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    newsOrchestratorAgent = NewsOrchestratorAgent(f"newsOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
+    sentimentAnalysisAgent = SentimentAnalysisAgent(f"sentimentAnalysis@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    
+    
+    
+    await sentimentAnalysisAgent.start(auto_register=True)
     
     await newsOrchestratorAgent.start(auto_register=True)
     await cryptoOrchestratorAgent.start(auto_register=True)

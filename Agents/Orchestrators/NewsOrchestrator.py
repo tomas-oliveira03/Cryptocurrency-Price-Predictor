@@ -5,7 +5,7 @@ from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[31m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class NewsOrchestrator(Agent):
+class NewsOrchestratorAgent(Agent):
     
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
@@ -19,7 +19,7 @@ class NewsOrchestrator(Agent):
             print(f"{AGENT_NAME} Notifying Crypto Reddit Agent to start...") 
             
             
-    class ListeningForMessages(CyclicBehaviour):
+    class ReceiveRequestBehav(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=20)
             if msg:
@@ -36,5 +36,5 @@ class NewsOrchestrator(Agent):
 
     async def setup(self):
         print(f"{AGENT_NAME} Starting...")
-        self.add_behaviour(self.ListeningForMessages())
+        self.add_behaviour(self.ReceiveRequestBehav())
         
