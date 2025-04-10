@@ -15,6 +15,9 @@ class RedditScraper:
         self.redditPassword = os.getenv("REDDIT_PASSWORD")
         mongoDBURI = os.getenv("MONGODB_URI")
         
+        if not self.redditClientID or not self.redditSecretKey or not self.redditUsername or not self.redditPassword:
+            raise ValueError("Please set the Reddit environment variables first.")
+        
         if not mongoDBURI:
             raise ValueError("Please set the mongoDB environment variable first.")
 
@@ -22,9 +25,6 @@ class RedditScraper:
         mongoClient = MongoClient(mongoDBURI)
         self.mongoCollection = mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True))
 
-        if not self.redditClientID or not self.redditSecretKey or not self.redditUsername or not self.redditPassword:
-            raise ValueError("Please set the Reddit environment variables first.")
-        
         
         # Create Reddit API connection
         self.headers=self.connectToReddit()
@@ -136,12 +136,11 @@ class RedditScraper:
             print("=====\n\n")
         
         
-        
-    # Utils
     def getAllSubreddits(self):
         with open('utils/allSubreddits.txt', 'r') as file:
             subreddits = [line.strip() for line in file.readlines()]
         return subreddits
+  
   
     def cleanText(self, text):
         return text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').strip()
