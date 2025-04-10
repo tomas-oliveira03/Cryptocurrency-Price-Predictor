@@ -1,6 +1,7 @@
 import os
 from bson import CodecOptions
 from pymongo import MongoClient, UpdateOne
+import pytz
 import requests
 from dotenv import load_dotenv
 from datetime import datetime
@@ -45,9 +46,8 @@ class CryptoPrice:
 
             # Convert the UNIX timestamp to a readable date
             for dayData in data:
-                timestamp = dayData["time"]
-                readableDate = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
-                dayData["date"] = readableDate
+                utcTime = datetime.fromtimestamp(dayData["time"]).replace(tzinfo=pytz.UTC)
+                dayData["date"] = utcTime
 
                 # Add fields
                 dayData["cryptoCurrency"] = coinSymbol

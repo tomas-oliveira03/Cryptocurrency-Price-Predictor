@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
+import pytz
 import requests
 from datetime import datetime
 from bson.codec_options import CodecOptions
@@ -25,9 +26,9 @@ class FearGreedIndex:
 
             formattedData = []
             for item in rawData:
-                readableDate = datetime.fromtimestamp(int(item["timestamp"])).strftime("%Y-%m-%d")
+                utcTime = datetime.fromtimestamp(int(item["timestamp"])).replace(tzinfo=pytz.UTC)
                 formattedData.append({
-                    "date": readableDate,
+                    "date": utcTime,
                     "value": int(item["value"]),
                     "classification": item["value_classification"]
                 })
