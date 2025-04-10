@@ -5,11 +5,9 @@ import asyncio
 import os
 from dotenv import load_dotenv
 import spade
-from Orchestrators.MainOrchestrator import MainOrchestrator
+from Orchestrators.GlobalOrchestrator import GlobalOrchestrator
 from Orchestrators.CryptoOrchestrator import CryptoOrchestrator
 from Orchestrators.NewsOrchestrator import NewsOrchestrator
-
-
 
 
 async def main():
@@ -22,18 +20,19 @@ async def main():
         raise ValueError("Please set the SPADE_DOMAIN and SPADE_PASSWORD environment variables first.")
     
     # Start agents
-    mainOrchestratorAgent = MainOrchestrator(f"mainOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    globalOrchestratorAgent = GlobalOrchestrator(f"globalOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     cryptoOrchestratorAgent = CryptoOrchestrator(f"cryptoOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     newsOrchestratorAgent = NewsOrchestrator(f"newsOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
     
     await newsOrchestratorAgent.start(auto_register=True)
     await cryptoOrchestratorAgent.start(auto_register=True)
-    await mainOrchestratorAgent.start(auto_register=True)
+    await globalOrchestratorAgent.start(auto_register=True)
     
 
-    await spade.wait_until_finished(mainOrchestratorAgent)
+    await spade.wait_until_finished(globalOrchestratorAgent)
     await spade.wait_until_finished(cryptoOrchestratorAgent)
+    await spade.wait_until_finished(newsOrchestratorAgent)
 
 
 def signal_handler(sig, frame):

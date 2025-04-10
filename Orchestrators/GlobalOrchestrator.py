@@ -7,7 +7,7 @@ from spade.message import Message
 AGENT_NAME = f"\033[34m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
 
-class MainOrchestrator(Agent):
+class GlobalOrchestrator(Agent):
     
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
