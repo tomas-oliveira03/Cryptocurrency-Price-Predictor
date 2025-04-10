@@ -137,7 +137,7 @@ class RedditScraper:
         
         
     def getAllSubreddits(self):
-        with open('utils/allSubreddits.txt', 'r') as file:
+        with open('Services/utils/allSubreddits.txt', 'r') as file:
             subreddits = [line.strip() for line in file.readlines()]
         return subreddits
   

@@ -65,7 +65,7 @@ class Articles:
           
           
     def getAllWebsiteArticles(self):
-        with open("utils/allArticles.json", "r") as file:
+        with open("Services/utils/allArticles.json", "r") as file:
             data = json.load(file)
         return data
 
