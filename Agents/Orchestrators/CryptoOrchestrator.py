@@ -1,6 +1,7 @@
 import os
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
+from spade.message import Message
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[33m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -15,7 +16,11 @@ class CryptoOrchestratorAgent(Agent):
     class NotifyCryptoSpecialists(OneShotBehaviour):
         async def run(self):
             
-            print(f"{AGENT_NAME} Notifying Crypto Price Agent to start...")
+            print(f"{AGENT_NAME} Notifying CryptoPrice Agent to start...")
+            msg = Message(to=f"cryptoPrice@{self.agent.spadeDomain}")
+            msg.set_metadata("performative", "start_agent")
+            await self.send(msg)    
+
             print(f"{AGENT_NAME} Notifying Crypto FearGreedIndex Agent to start...") 
             
             

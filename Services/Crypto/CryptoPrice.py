@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 class CryptoPrice:
-    def __init__(self):
+    def __init__(self, SHOW_LOGS=True):
+        self.SHOW_LOGS=SHOW_LOGS
+        
         load_dotenv()
         self.coinDeskAPIKey = os.getenv("COINDESK_API_KEY")
         self.coinMarketCapAPIKey = os.getenv('COINMARKETCAP_API_KEY')
@@ -60,9 +62,10 @@ class CryptoPrice:
                 averagePrice = (high + low + close) / 3
                 dayData["averagePrice"] = averagePrice
 
+            if self.SHOW_LOGS: print(f"Fetched data for {coinSymbol}. Entries: {len(data)}")
             return data
         else:
-            print(f"Failed to fetch data: {response.status_code}")
+            if self.SHOW_LOGS: print(f"Failed to fetch data: {response.status_code}")
             return None
 
 
@@ -76,11 +79,16 @@ class CryptoPrice:
             )
             for item in data
         ]
+        numberOfInsertions = 0
+        
         if operations:
-            self.mongoCollection.bulk_write(operations)
+            result = self.mongoCollection.bulk_write(operations)
+            numberOfInsertions = result.upserted_count        
             
+        return numberOfInsertions
+        
     
-    def getTop10Coins(self):
+    def getTopCoins(self, topK=10):
         url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
         headers = {
             'X-CMC_PRO_API_KEY': self.coinMarketCapAPIKey, 
@@ -88,7 +96,7 @@ class CryptoPrice:
         }
 
         params = {
-            'limit': 10,                          # Top 10 coins
+            'limit': topK,                        # Top K coins
             'convert': self.currencySymbol,       # Convert prices to USD
             'sort': 'market_cap',                 # Sort by market cap
         }
@@ -97,34 +105,36 @@ class CryptoPrice:
         
         if response.status_code == 200:
             coins = response.json().get('data', [])
-            top10Coins = [coin['symbol'] for coin in coins]  # Get the symbol of the top 10 coins
-            return top10Coins
+            topCoins = [coin['symbol'] for coin in coins]  # Get the symbol of the top 10 coins
+            return topCoins
         else:
-            print(f"Error fetching CoinMarketCap data: {response.status_code}")
+            if self.SHOW_LOGS: print(f"Error fetching CoinMarketCap data: {response.status_code}")
             return []
 
 
     def fetchCoinsData(self):
         # Get top 10 coins by market cap
-        top10Coins = self.getTop10Coins()
-        if not top10Coins:
-            print("Could not fetch the top 10 coins.")
-            exit(1)
+        topCoins = self.getTopCoins()
+        if not topCoins:
+            raise ValueError("Failed to fetch top coins.")
         
-        print(f"Top 10 traded coins: {top10Coins}")
+        if self.SHOW_LOGS: print(f"Top 10 traded coins: {topCoins}")
 
         allHistoricalData = []
 
-        # Loop through each cryptocurrency (BTC, ETH, etc.)
-        for coinSymbol in top10Coins:
-            print(f"Fetching data for {coinSymbol}...")
+        for coinSymbol in topCoins:
             historicalData = self.fetchHistoricalData(coinSymbol, limit=365)
 
             if historicalData:
                 allHistoricalData.extend(historicalData)
 
         # Save all fetched data to MongoDB
-        self.saveToMongo(allHistoricalData)
+        databaseInfo = self.saveToMongo(allHistoricalData)
+        if self.SHOW_LOGS: print("Crypto prices data saved to MongoDB successfully.")
+        
+        return databaseInfo
+        
+        
 
 
 # Example usage
