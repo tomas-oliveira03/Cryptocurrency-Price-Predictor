@@ -1,0 +1,58 @@
+[
+    {
+        "journal": "CoinDesk",
+        "url": "https://www.coindesk.com/arc/outboundfeeds/rss/"
+    },
+    {
+        "journal": "CoinTelegraph",
+        "url": "https://cointelegraph.com/rss"
+    },
+    {
+        "journal": "BitcoinMagazine",
+        "url": "https://bitcoinmagazine.com/.rss/full/"
+    },
+    {
+        "journal": "CryptoSlate",
+        "url": "https://cryptoslate.com/feed/"
+    },
+    {
+        "journal": "Decrypt",
+        "url": "https://decrypt.co/feed"
+    },
+    {
+        "journal": "NewsBTC",
+        "url": "https://www.newsbtc.com/feed/"
+    },
+    {
+        "journal": "CryptoPotato",
+        "url": "https://cryptopotato.com/feed/"
+    },
+    {
+        "journal": "TheBlock",
+        "url": "https://feeds.feedburner.com/TheBlockCrypto"
+    },
+    {
+        "journal": "CryptoBriefing",
+        "url": "https://cryptobriefing.com/feed/"
+    },
+    {
+        "journal": "AMBCrypto",
+        "url": "https://ambcrypto.com/feed/"
+    },
+    {
+        "journal": "Blockonomi",
+        "url": "https://blockonomi.com/feed/"
+    },
+    {
+        "journal": "EthereumWorldNews",
+        "url": "https://ethereumworldnews.com/feed/"
+    },
+    {
+        "journal": "UToday",
+        "url": "https://u.today/rss"
+    },
+    {
+        "journal": "Bitcoinist",
+        "url": "https://bitcoinist.com/feed/"
+    }
+]

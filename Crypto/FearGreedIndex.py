@@ -28,12 +28,12 @@ class FearGreedIndex:
                 readableDate = datetime.fromtimestamp(int(item["timestamp"])).strftime("%Y-%m-%d")
                 formattedData.append({
                     "date": readableDate,
-                    "value": item["value"],
+                    "value": int(item["value"]),
                     "classification": item["value_classification"]
                 })
 
             self.saveToMongo(formattedData)
-            print(f"Saved {len(formattedData)} records to MongoDB.")
+            print(f"Saved records to MongoDB.")
         else:
             print("Failed to fetch data:", response.status_code)
 
