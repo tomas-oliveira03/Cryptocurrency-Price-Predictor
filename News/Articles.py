@@ -37,7 +37,7 @@ class Articles:
                 "title": entry.title,
                 "link": entry.link,
                 "date": self.parseDate(entry.get("published")),
-                "summary": self.stripHtml(entry.get("summary", "")),
+                "text": self.stripHtml(entry.get("summary", "")),
             }
             for entry in feed.entries
         ]
