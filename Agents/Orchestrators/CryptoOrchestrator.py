@@ -1,3 +1,4 @@
+import json
 import os
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
@@ -32,6 +33,12 @@ class CryptoOrchestratorAgent(Agent):
                 match performativeReceived:
                     case "start_agent":
                         self.agent.add_behaviour(self.agent.NotifyCryptoSpecialists())
+                        
+                    case "job_finished":
+                        print("JOB FINISHED")
+                        data = json.loads(msg.body)
+                        name = data.get("databaseCollectionName")
+                        print(f"Job name received: {name}")
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")

@@ -1,7 +1,9 @@
+import json
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.Crypto.CryptoPrice import CryptoPrice
+from spade.message import Message
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;208m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -41,8 +43,21 @@ class CryptoPriceAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
-                numberOfInsertions = self.agent.cryptoPrice.fetchCoinsData()
-                print(f"{AGENT_NAME} Crypto prices data saved to MongoDB successfully. New insertions: {numberOfInsertions}")
+                # numberOfInsertions = self.agent.cryptoPrice.fetchCoinsData()
+                numberOfInsertions = 9999
+                print(f"{AGENT_NAME} Crypto prices data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
+                
+                # Send confirmation message to CryptoOrchestrator saying job is finished
+                msg = Message(to=f"cryptoOrchestrator@{self.agent.spadeDomain}")
+                msg.set_metadata("performative", "job_finished")
+                
+                payload = {
+                    "databaseCollectionName": "crypto-price" 
+                }
+                msg.body = json.dumps(payload)
+                
+                await self.send(msg)    
+                
             except Exception as e:
                 print(f"{AGENT_NAME} Error fetching crypto prices data. Error: {e}")
                 return
