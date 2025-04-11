@@ -2,7 +2,7 @@ import json
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
-from Services.Model.SentimentAnalysis import SentimentAnalysis
+from Services.Models.SentimentAnalysis import SentimentAnalysis
 from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY

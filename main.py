@@ -10,7 +10,7 @@ from Agents.Crypto.FearGreedIndex import FearGreedIndexAgent
 from Agents.Orchestrators.GlobalOrchestrator import GlobalOrchestratorAgent
 from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
 from Agents.Orchestrators.NewsOrchestrator import NewsOrchestratorAgent
-from Agents.Model.SentimentAnalysis import SentimentAnalysisAgent
+from Agents.Models.SentimentAnalysis import SentimentAnalysisAgent
 
 
 async def main():
