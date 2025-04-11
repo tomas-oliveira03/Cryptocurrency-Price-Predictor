@@ -1,7 +1,7 @@
 import os
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
-from spade.message import Message
+from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[34m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -18,19 +18,13 @@ class GlobalOrchestratorAgent(Agent):
         async def run(self):
             
             print(f"{AGENT_NAME} Notifying CryptoOrchestrator Agent to start...")
-            msg = Message(to=f"cryptoOrchestrator@{self.agent.spadeDomain}")
-            msg.set_metadata("performative", "start_agent")
-            await self.send(msg)    
+            await sendMessage(self, "cryptoOrchestrator", "start_agent")
             
             print(f"{AGENT_NAME} Notifying NewsOrchestrator Agent to start...")
-            msg = Message(to=f"newsOrchestrator@{self.agent.spadeDomain}")
-            msg.set_metadata("performative", "start_agent")
-            await self.send(msg)    
+            await sendMessage(self, "newsOrchestrator", "start_agent")
             
             print(f"{AGENT_NAME} Notifying SentimentAnalysis Agent to start...")
-            msg = Message(to=f"sentimentAnalysis@{self.agent.spadeDomain}")
-            msg.set_metadata("performative", "start_agent")
-            await self.send(msg)    
+            await sendMessage(self, "sentimentAnalysis", "start_agent")
             
             
     class ListeningForMessages(CyclicBehaviour):
