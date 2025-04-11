@@ -29,8 +29,9 @@ class SentimentAnalysisAgent(Agent):
                         print(f"{AGENT_NAME} Analyzing new data...")
                         payload = json.loads(msg.body)
                         databaseCollectionName = payload.get("databaseCollectionName")
+                        providerAgentName = payload.get("providerAgentName")
                         
-                        if not databaseCollectionName:
+                        if not databaseCollectionName or not providerAgentName:
                             print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Payload arguments missing.")
                             return
                         

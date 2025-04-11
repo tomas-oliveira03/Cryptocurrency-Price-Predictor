@@ -29,11 +29,6 @@ class NewsOrchestratorAgent(Agent):
                     case "start_agent":
                         self.agent.add_behaviour(self.agent.NotifyNewsSpecialists())
                         
-                        # TEST ONLY (CODE MISSPLACED)             
-                        await sendMessage(self, "sentimentAnalysis", "new_data_to_analyze", {
-                            "databaseCollectionName": "reddit"
-                        })
-                            
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
