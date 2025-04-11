@@ -1,15 +1,15 @@
 import os
 from bson import CodecOptions
 from dotenv import load_dotenv
-from pymongo import MongoClient
-from textblob import TextBlob
+from pymongo import MongoClient, UpdateOne
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import pandas as pd
 
 class SentimentAnalysis:
-    def __init__(self):
+    def __init__(self, SHOW_LOGS=True):
         load_dotenv()
         
+        self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         if not mongoDBURI:
             raise ValueError("Please set the MONGODB_URI environment variable first.")
@@ -24,16 +24,16 @@ class SentimentAnalysis:
 
     def analyzeSentimentsForAllCollections(self):
         for mongoCollection in self.allMongoCollections:
-            print("Sentiment analysis for collection:", mongoCollection.name)
+            if self.SHOW_LOGS: print("Sentiment analysis for collection:", mongoCollection.name)
             self.analyzeSentimentsForCollection(mongoCollection)
-            print("\n")
+            if self.SHOW_LOGS: print("\n")
         
 
     def analyzeSentimentsForCollection(self, mongoCollection):
         
         # Query all documents that do not have the "sentiment" field
         missingSentiments = mongoCollection.find({"sentiment": {"$exists": False}})
-        updatedCount = 0
+        bulkUpdatedData = []
 
         for doc in missingSentiments:
             docId = doc.get('_id')
@@ -45,19 +45,21 @@ class SentimentAnalysis:
             sentiment, scores = self.analyzeSentimentForEntry(combinedContent)
 
             # Create the sentiment field to update
-            sentiment_data = {
+            sentimentData = {
                 "label": sentiment,
                 "scores": scores
             }
-
-            # Update the document in MongoDB
-            mongoCollection.update_one(
-                {"_id": docId},
-                {"$set": {"sentiment": sentiment_data}}
+            
+            bulkUpdatedData.append(
+                {
+                    "docId": docId,
+                    "sentiment": sentimentData
+                }
             )
-            updatedCount += 1
 
-        print(f"Finished updating {updatedCount} document(s) with sentiment analysis.")
+        # Save all fetched data to MongoDB
+        self.saveToMongo(bulkUpdatedData, mongoCollection)
+        if self.SHOW_LOGS: print(f"Finished updating {len(bulkUpdatedData)} document(s) with sentiment analysis.")
         
         
     def analyzeSentimentForEntry(self, content):
@@ -78,6 +80,19 @@ class SentimentAnalysis:
 
         return sentiment, scores
 
+
+    def saveToMongo(self, data, mongoCollection):
+        # Use upserts to avoid duplicates
+        operations = [
+            UpdateOne(
+                {"_id": item["docId"]},
+                {"$set": {"sentiment": item["sentiment"]}}
+            )
+            for item in data
+        ]
+        
+        if operations:
+            mongoCollection.bulk_write(operations)
 
 
 if __name__ == "__main__":

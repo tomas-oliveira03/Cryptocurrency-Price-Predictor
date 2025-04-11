@@ -32,10 +32,10 @@ class CryptoOrchestratorAgent(Agent):
                         self.agent.add_behaviour(self.agent.NotifyCryptoSpecialists())
                         
                     case "job_finished":
-                        print("JOB FINISHED")
-                        data = json.loads(msg.body)
-                        name = data.get("databaseCollectionName")
-                        print(f"Job name received: {name}")
+                        payload = json.loads(msg.body)
+                        payload["providerName"] = "CryptoOrchestrator"
+                        await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")

@@ -8,9 +8,9 @@ from datetime import datetime
 
 class CryptoPrice:
     def __init__(self, SHOW_LOGS=True):
-        self.SHOW_LOGS=SHOW_LOGS
-        
         load_dotenv()
+        
+        self.SHOW_LOGS=SHOW_LOGS
         self.coinDeskAPIKey = os.getenv("COINDESK_API_KEY")
         self.coinMarketCapAPIKey = os.getenv('COINMARKETCAP_API_KEY')
         self.currencySymbol = "USD" 
