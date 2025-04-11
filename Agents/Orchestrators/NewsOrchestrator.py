@@ -1,6 +1,7 @@
 import os
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
+from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[31m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -27,7 +28,12 @@ class NewsOrchestratorAgent(Agent):
                 match performativeReceived:
                     case "start_agent":
                         self.agent.add_behaviour(self.agent.NotifyNewsSpecialists())
-                
+                        
+                        # TEST ONLY (CODE MISSPLACED)             
+                        await sendMessage(self, "sentimentAnalysis", "new_data_to_analyze", {
+                            "databaseCollectionName": "reddit"
+                        })
+                            
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         

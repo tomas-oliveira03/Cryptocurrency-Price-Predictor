@@ -17,16 +17,19 @@ class SentimentAnalysis:
         # Database connection
         mongoClient = MongoClient(mongoDBURI)
         
-        mongoCollectionReddit = mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True))
-        mongoCollectionArticles = mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
-        self.allMongoCollections = [mongoCollectionReddit, mongoCollectionArticles]
+        self.allMongoCollectionsDict = {
+            "reddit": mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True)),
+            "articles": mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
+        }
 
 
-    def analyzeSentimentsForAllCollections(self):
-        for mongoCollection in self.allMongoCollections:
-            if self.SHOW_LOGS: print("Sentiment analysis for collection:", mongoCollection.name)
-            self.analyzeSentimentsForCollection(mongoCollection)
-            if self.SHOW_LOGS: print("\n")
+    def analyzeSentimentsForAllCollections(self, collectionName):
+        collection = self.allMongoCollectionsDict.get(collectionName)
+        if collection is None:
+            raise ValueError(f"Invalid collection name: {collectionName}")
+    
+        if self.SHOW_LOGS: print("Sentiment analysis for collection:", collectionName)
+        self.analyzeSentimentsForCollection(collection)
         
 
     def analyzeSentimentsForCollection(self, mongoCollection):
@@ -97,4 +100,4 @@ class SentimentAnalysis:
 
 if __name__ == "__main__":
     sentimentAnalysis = SentimentAnalysis()
-    sentimentAnalysis.analyzeSentimentsForAllCollections()
+    sentimentAnalysis.analyzeSentimentsForAllCollections("reddit")

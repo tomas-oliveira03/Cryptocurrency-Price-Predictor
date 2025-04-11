@@ -31,9 +31,9 @@ async def main():
     
     
     
+    await sentimentAnalysisAgent.start(auto_register=True)
     
     await cryptoPriceAgent.start(auto_register=True)
-    await sentimentAnalysisAgent.start(auto_register=True)
     
     await newsOrchestratorAgent.start(auto_register=True)
     await cryptoOrchestratorAgent.start(auto_register=True)

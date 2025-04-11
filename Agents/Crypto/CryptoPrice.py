@@ -55,7 +55,7 @@ class CryptoPriceAgent(Agent):
                 await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
                                 
             except Exception as e:
-                print(f"{AGENT_NAME} Error fetching crypto prices data. Error: {e}")
+                print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
                 return
                 
             

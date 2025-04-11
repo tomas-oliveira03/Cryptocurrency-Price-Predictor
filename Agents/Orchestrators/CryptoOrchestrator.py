@@ -33,7 +33,7 @@ class CryptoOrchestratorAgent(Agent):
                         
                     case "job_finished":
                         payload = json.loads(msg.body)
-                        payload["providerName"] = "CryptoOrchestrator"
+                        payload["providerAgentName"] = "CryptoOrchestrator"
                         await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
 
                 

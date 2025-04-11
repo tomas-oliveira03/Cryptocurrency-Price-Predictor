@@ -27,10 +27,6 @@ class GlobalOrchestratorAgent(Agent):
             print(f"{AGENT_NAME} Notifying SentimentAnalysis Agent to start...")
             await sendMessage(self, "sentimentAnalysis", "start_agent")
             
-            await sendMessage(self, "sentimentAnalysis", "new_data_to_analyze", {
-                "databaseCollectionName": "reddit"
-            })
-            
             
     class ReceiveRequestBehav(CyclicBehaviour):
         async def run(self):
@@ -40,14 +36,12 @@ class GlobalOrchestratorAgent(Agent):
                 match performativeReceived:
                     case "new_data_available":
                         payload = json.loads(msg.body)
-                        print(f"{AGENT_NAME} New data available to send to prediciton model. {payload}")
+                        print(f"{AGENT_NAME} New data available to send to prediction model. {payload}")
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
 
-        
-        
     async def setup(self):
         print(f"{AGENT_NAME} Starting...")
         self.add_behaviour(self.NotifyOrchestratorSpecialists())
