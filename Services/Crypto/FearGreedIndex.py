@@ -7,9 +7,10 @@ from bson.codec_options import CodecOptions
 import os
 
 class FearGreedIndex:
-    def __init__(self):
+    def __init__(self, SHOW_LOGS=True):
         load_dotenv()
         
+        self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         if not mongoDBURI:
             raise ValueError("Please set the MONGODB_URI environment variable first.")
@@ -18,7 +19,8 @@ class FearGreedIndex:
         mongoClient = MongoClient(mongoDBURI)
         self.mongoCollection = mongoClient['ASM'].get_collection('crypto-fear-greed', codec_options=CodecOptions(tz_aware=True))
 
-    def fetchData(self):
+
+    def fetchFearGreedIndexData(self):
         response = requests.get("https://api.alternative.me/fng/?limit=365&format=json")
 
         if response.status_code == 200:
@@ -33,10 +35,13 @@ class FearGreedIndex:
                     "classification": item["value_classification"]
                 })
 
-            self.saveToMongo(formattedData)
-            print(f"Saved records to MongoDB.")
+            databaseInfo = self.saveToMongo(formattedData)
+            if self.SHOW_LOGS: print(f"FearGreed index data saved to MongoDB successfully.")
+            return databaseInfo
+        
         else:
-            print("Failed to fetch data:", response.status_code)
+            if self.SHOW_LOGS: print(f"Failed to fetch data: {response.status_code}")
+            raise ValueError("Failed to fetch fear-greed index.")
 
     def saveToMongo(self, data):
         # Use upserts to avoid duplicates
@@ -44,10 +49,15 @@ class FearGreedIndex:
             UpdateOne({"date": item["date"]}, {"$set": item}, upsert=True)
             for item in data
         ]
+        numberOfInsertions = 0
+        
         if operations:
-            self.mongoCollection.bulk_write(operations)
-
+            result = self.mongoCollection.bulk_write(operations)
+            numberOfInsertions = result.upserted_count        
+            
+        return numberOfInsertions
+       
 # Run it
 if __name__ == "__main__":
     fgIndex = FearGreedIndex()
-    fgIndex.fetchData()
+    fgIndex.fetchFearGreedIndexData()

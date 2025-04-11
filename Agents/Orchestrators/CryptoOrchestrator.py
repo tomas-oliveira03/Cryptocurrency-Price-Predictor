@@ -19,7 +19,8 @@ class CryptoOrchestratorAgent(Agent):
             print(f"{AGENT_NAME} Notifying CryptoPrice Agent to start...")
             await sendMessage(self, "cryptoPrice", "start_agent")
             
-            print(f"{AGENT_NAME} Notifying Crypto FearGreedIndex Agent to start...") 
+            print(f"{AGENT_NAME} Notifying FearGreedIndex Agent to start...") 
+            await sendMessage(self, "fearGreedIndex", "start_agent")
             
             
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -36,11 +37,8 @@ class CryptoOrchestratorAgent(Agent):
                         payload["providerAgentName"] = "CryptoOrchestrator"
                         await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
 
-                
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
-        
-
 
 
     async def setup(self):

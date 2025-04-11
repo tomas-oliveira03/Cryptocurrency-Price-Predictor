@@ -64,28 +64,10 @@ class CryptoPrice:
 
             if self.SHOW_LOGS: print(f"Fetched data for {coinSymbol}. Entries: {len(data)}")
             return data
+        
         else:
             if self.SHOW_LOGS: print(f"Failed to fetch data: {response.status_code}")
             return None
-
-
-    def saveToMongo(self, data):
-        # Use upserts to avoid duplicates
-        operations = [
-            UpdateOne(
-                {"date": item["date"], "cryptoCurrency": item["cryptoCurrency"]}, 
-                {"$set": item}, 
-                upsert=True
-            )
-            for item in data
-        ]
-        numberOfInsertions = 0
-        
-        if operations:
-            result = self.mongoCollection.bulk_write(operations)
-            numberOfInsertions = result.upserted_count        
-            
-        return numberOfInsertions
         
     
     def getTopCoins(self, topK=10):
@@ -113,7 +95,7 @@ class CryptoPrice:
 
 
     def fetchCoinsData(self):
-        # Get top 10 coins by market cap
+        # Get top coins by market cap
         topCoins = self.getTopCoins()
         if not topCoins:
             raise ValueError("Failed to fetch top coins.")
@@ -131,10 +113,26 @@ class CryptoPrice:
         # Save all fetched data to MongoDB
         databaseInfo = self.saveToMongo(allHistoricalData)
         if self.SHOW_LOGS: print("Crypto prices data saved to MongoDB successfully.")
-        
         return databaseInfo
         
         
+    def saveToMongo(self, data):
+        # Use upserts to avoid duplicates
+        operations = [
+            UpdateOne(
+                {"date": item["date"], "cryptoCurrency": item["cryptoCurrency"]}, 
+                {"$set": item}, 
+                upsert=True
+            )
+            for item in data
+        ]
+        numberOfInsertions = 0
+        
+        if operations:
+            result = self.mongoCollection.bulk_write(operations)
+            numberOfInsertions = result.upserted_count        
+            
+        return numberOfInsertions
 
 
 # Example usage
