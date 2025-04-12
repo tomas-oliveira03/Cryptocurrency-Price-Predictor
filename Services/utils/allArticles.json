@@ -54,5 +54,101 @@
     {
         "journal": "Bitcoinist",
         "url": "https://bitcoinist.com/feed/"
-    }
+    },
+    {
+        "journal": "DailyHodl",
+        "url": "https://dailyhodl.com/feed/"
+      },
+      {
+        "journal": "InvestingCrypto",
+        "url": "https://www.investing.com/rss/news_301.rss"
+      },
+      {
+        "journal": "CryptoNews",
+        "url": "https://cryptonews.com/news/feed/"
+      },
+      {
+        "journal": "CoinJournal",
+        "url": "https://coinjournal.net/news/feed/"
+      },
+      {
+        "journal": "BeInCrypto",
+        "url": "https://beincrypto.com/feed/"
+      },
+      {
+        "journal": "TheDailyChain",
+        "url": "https://thedailychain.com/feed/"
+      },
+      {
+        "journal": "CryptoGlobe",
+        "url": "https://www.cryptoglobe.com/latest/feed/"
+      },
+      {
+        "journal": "CoinGape",
+        "url": "https://coingape.com/feed/"
+      },
+      {
+        "journal": "CryptoPanic",
+        "url": "https://cryptopanic.com/news/rss/"
+      },
+      {
+        "journal": "CoinCheckup",
+        "url": "https://coincheckup.com/news/rss"
+      },
+      {
+        "journal": "CryptoSlateDeFi",
+        "url": "https://cryptoslate.com/defi/feed/"
+      },
+      {
+        "journal": "CryptoTicker",
+        "url": "https://cryptoticker.io/en/feed/"
+      },
+      {
+        "journal": "NullTX",
+        "url": "https://nulltx.com/feed/"
+      },
+      {
+        "journal": "BitcoinDotComNews",
+        "url": "https://news.bitcoin.com/feed/"
+      },
+      {
+        "journal": "CryptoAdventure",
+        "url": "https://cryptoadventure.com/feed/"
+      },
+      {
+        "journal": "BTCManager",
+        "url": "https://btcmanager.com/feed/"
+      },
+      {
+        "journal": "CoinSpeaker",
+        "url": "https://www.coinspeaker.com/feed/"
+      },
+      {
+        "journal": "AltcoinBuzz",
+        "url": "https://www.altcoinbuzz.io/feed/"
+      },
+      {
+        "journal": "ETHNews",
+        "url": "https://www.ethnews.com/rss.xml"
+      },
+      {
+        "journal": "CryptoCompare",
+        "url": "https://www.cryptocompare.com/rss/news/"
+      },
+      {
+        "journal": "CoinIdol",
+        "url": "https://coinidol.com/rss/"
+      },
+      {
+        "journal": "NewsLogical",
+        "url": "https://newslogical.com/feed/"
+      },
+      {
+        "journal": "Blokt",
+        "url": "https://blokt.com/feed"
+      },
+      {
+        "journal": "CryptoNewsZ",
+        "url": "https://www.cryptonewsz.com/feed/"
+      }
 ]
