@@ -1,7 +1,9 @@
 import csv
-import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
+import sys
+from bson import CodecOptions
+from pymongo import MongoClient, UpdateOne
 
 def read_csv(file_path):
     """Read CSV file and return list of dictionaries."""
@@ -13,19 +15,31 @@ def read_csv(file_path):
         print(f"Error reading {file_path}: {e}")
         raise
 
-def save_json(data, file_path):
-    """Save data to JSON file."""
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, indent=2, ensure_ascii=False)
-    print(f"JSON file saved to {file_path}")
+def save_to_mongo(data):
+    mongoClient = MongoClient("mongodb://localhost:27017/")
+    mongoCollection = mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
+
+    operations = [
+            UpdateOne({"id": item["id"]}, {"$set": item}, upsert=True)
+            for item in data
+        ]
+    batch_size = 1000
+
+    for i in range(0, len(data), batch_size):
+        batch = data[i:i + batch_size]
+        operations = [
+            UpdateOne({"id": item["id"]}, {"$set": item}, upsert=True)
+            for item in batch
+        ]
+        mongoCollection.bulk_write(operations)
 
 def create_merged_json():
     # Define file paths
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    cryptopanic_news_path = os.path.join(current_dir, "cryptopanic_news.csv")
-    source_path = os.path.join(current_dir, "source.csv")
-    currency_path = os.path.join(current_dir, "currency.csv")
-    news_currency_path = os.path.join(current_dir, "news_currency.csv")
+    cryptopanic_news_path = os.path.join(current_dir, "files/cryptopanic_news.csv")
+    source_path = os.path.join(current_dir, "files/source.csv")
+    currency_path = os.path.join(current_dir, "files/currency.csv")
+    news_currency_path = os.path.join(current_dir, "files/news_currency.csv")
     
     # Read CSV files
     news_data = read_csv(cryptopanic_news_path)
@@ -79,7 +93,7 @@ def create_merged_json():
                 merged_item[key] = int(value) if value else None
             # Rename newsDatetime to published_at
             elif key == 'newsDatetime':
-                merged_item['created_at'] = value
+                merged_item['created_at'] = parseDate(value)
             # Handle vote fields - add to votes object only, not to top level
             elif key in vote_fields:
                 if value is not None:
@@ -114,11 +128,24 @@ def create_merged_json():
         
         merged_data.append(merged_item)
     
-    # Save to JSON file
-    output_path = os.path.join(current_dir, "CryptoPanicDataDump.json")
-    save_json(merged_data, output_path)
-    return output_path
+    save_to_mongo(merged_data)
+
+    
+def parseDate(date_str):
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        return dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+    
 
 if __name__ == "__main__":
     output_path = create_merged_json()
     print(f"Merged data saved to: {output_path}")
+    
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    from Services.Models.SentimentAnalysis import SentimentAnalysis
+    
+    sentimentAnalysis = SentimentAnalysis()
+    sentimentAnalysis.analyzeSentimentsForAllCollections("forum")
+    
