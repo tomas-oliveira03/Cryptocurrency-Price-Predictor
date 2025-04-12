@@ -1,2 +1,5 @@
 __pycache__
 .env
+
+DataDump/*.csv
+DataDump/*.json
