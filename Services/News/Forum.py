@@ -46,7 +46,8 @@ class Forum:
                         else:
                             cryptoNews = self.getPostsByFilter(filter_type=filter, kind=kind, currencies=[crypto])
                         
-                        self.saveToMongo(cryptoNews["results"])
+                        # self.saveToMongo(cryptoNews["results"])
+                        self.save_to_json(cryptoNews, "aaaa.json")
                         print("Latest news", len(cryptoNews["results"]))
                         
                     except Exception as e:
@@ -83,20 +84,94 @@ class Forum:
             raise
     
     
-    def saveToMongo(self, data):
-        # Use upserts to avoid duplicates
-        operations = [
-            UpdateOne({"id": item["id"]}, {"$set": item}, upsert=True)
-            for item in data
-        ]
-        numberOfInsertions = 0
+    # def saveToMongo(self, data):
+    #     # Use upserts to avoid duplicates
+    #     operations = [
+    #         UpdateOne({"id": item["id"]}, {"$set": item}, upsert=True)
+    #         for item in data
+    #     ]
+    #     numberOfInsertions = 0
         
-        if operations:
-            result = self.mongoCollection.bulk_write(operations)
-            numberOfInsertions = result.upserted_count        
+    #     if operations:
+    #         result = self.mongoCollection.bulk_write(operations)
+    #         numberOfInsertions = result.upserted_count        
             
-        return numberOfInsertions
-       
+    #     return numberOfInsertions
+        
+    def save_to_json(self, data: Dict, filename: Optional[str] = None) -> str:
+        if not filename:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f'cryptopanic_data_{timestamp}.json'
+        
+        filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), filename)
+        
+        # Process the data before saving
+        if 'results' in data and isinstance(data['results'], list):
+            for result in data['results']:
+                # 1. Remove unnecessary entries
+                if 'kind' in result:
+                    del result['kind']
+                if 'domain' in result:
+                    del result['domain']
+                if 'published_at' in result:
+                    del result['published_at']
+                if 'slug' in result:
+                    del result['slug']
+
+                # Simplify currencies to only include code and name
+                if 'currencies' in result and isinstance(result['currencies'], list):
+                    simplified_currencies = []
+                    for currency in result['currencies']:
+                        if isinstance(currency, dict) and 'code' in currency and 'title' in currency:
+                            simplified_currencies.append({
+                                'code': currency['code'],
+                                'name': currency['title']
+                            })
+                    result['currencies'] = simplified_currencies
+
+                # 2. Create a new ordered dictionary for the fields we want
+                new_result = {}
+
+                # Add id first if it exists
+                if 'id' in result:
+                    new_result['id'] = result['id']
+
+                # Add created_at second if it exists
+                if 'created_at' in result:
+                    new_result['created_at'] = result['created_at']
+                
+                # Add currencies first
+                if 'currencies' in result:
+                    new_result['currencies'] = result['currencies']
+                
+                # Add source right after currencies
+                if 'source' in result and isinstance(result['source'], dict) and 'title' in result['source']:
+                    new_result['source'] = result['source']['title'] 
+                
+                # Add title next
+                if 'title' in result:
+                    new_result['title'] = result['title']
+                
+                # Add url next
+                if 'url' in result:
+                    new_result['url'] = result['url']
+                
+                # Add any other fields, ensuring that we avoid duplicating important fields
+                for key, value in result.items():
+                    if key not in ['id', 'created_at', 'currencies', 'source', 'title', 'url']:
+                        new_result[key] = value
+
+                new_result["method"] = "Scrape"
+                # Replace the original result with our reordered one
+                result.clear()
+                result.update(new_result)
+        
+        with open(filepath, 'a', encoding='utf-8') as f:
+            json.dump(data["results"], f, ensure_ascii=False, indent=4)
+        
+        print(f"Data saved to {filepath}")
+        return filepath
+
 
 
 if __name__ == "__main__":
