@@ -25,10 +25,8 @@ class RedditScraper:
         mongoClient = MongoClient(mongoDBURI)
         self.mongoCollection = mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True))
 
-        
         # Create Reddit API connection
         self.headers=self.connectToReddit()
-        
         self.allSubreddits=self.getAllSubreddits()
     
     
@@ -52,7 +50,6 @@ class RedditScraper:
             params['after'] = after
             
         url = f"https://oauth.reddit.com/r/{subreddit}/{sort}"
-        
         res = requests.get(url, headers=self.headers, params=params)
         
         if res.status_code != 200:

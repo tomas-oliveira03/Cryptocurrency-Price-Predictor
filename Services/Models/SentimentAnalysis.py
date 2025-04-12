@@ -19,7 +19,8 @@ class SentimentAnalysis:
         
         self.allMongoCollectionsDict = {
             "reddit": mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True)),
-            "articles": mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
+            "articles": mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True)),
+            "forum": mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
         }
 
 
@@ -44,7 +45,6 @@ class SentimentAnalysis:
             text = doc.get('text', '')
 
             combinedContent = f"{title}\n{text}".strip()
-
             sentiment, scores = self.analyzeSentimentForEntry(combinedContent)
 
             # Create the sentiment field to update
