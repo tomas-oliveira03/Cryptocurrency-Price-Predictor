@@ -132,7 +132,7 @@ class RedditScraper:
         for subreddit in self.allSubreddits:
             
             print("Scraping subreddit: ", subreddit)
-            self.processSubredditData(subreddit=subreddit)
+            self.processSubredditData(subreddit=subreddit, sort="new")
             print("=====\n\n")
         
         

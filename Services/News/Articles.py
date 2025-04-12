@@ -45,6 +45,9 @@ class Articles:
 
 
     def stripHtml(self, html):
+        if not html or "<" not in html:
+            return html.strip()
+        
         soup = BeautifulSoup(html, "html.parser")
         
         # Remove unwanted tags completely
