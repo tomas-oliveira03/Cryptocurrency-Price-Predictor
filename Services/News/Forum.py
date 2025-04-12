@@ -2,10 +2,8 @@ from bson import CodecOptions
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
 import requests
-import json
 import os
-from datetime import datetime
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional
 import time
 
 class Forum:
@@ -28,6 +26,7 @@ class Forum:
             'User-Agent': 'Python CryptoPanic API Client',
             'Accept': 'application/json'
         }
+    
     
     def getAllInformation(self):
         listOfCryptoCurrencies = [None, 'BTC', 'ETH', 'USDT', 'XRP', 'BNB', 'SOL', 'USDC', 'DOGE', 'TRX', 'ADA']
@@ -152,7 +151,6 @@ class Forum:
                 result.update(newResult)
         
         return data["results"]
-
 
 
 if __name__ == "__main__":

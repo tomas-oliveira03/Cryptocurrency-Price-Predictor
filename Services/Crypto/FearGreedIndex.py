@@ -43,6 +43,7 @@ class FearGreedIndex:
             if self.SHOW_LOGS: print(f"Failed to fetch data: {response.status_code}")
             raise ValueError("Failed to fetch fear-greed index.")
 
+
     def saveToMongo(self, data):
         # Use upserts to avoid duplicates
         operations = [
@@ -57,7 +58,7 @@ class FearGreedIndex:
             
         return numberOfInsertions
        
-# Run it
+       
 if __name__ == "__main__":
     fgIndex = FearGreedIndex()
     fgIndex.fetchFearGreedIndexData()

@@ -135,10 +135,6 @@ class CryptoPrice:
         return numberOfInsertions
 
 
-# Example usage
 if __name__ == "__main__":
-    # Create an instance of CryptoPrice with the API key
     cryptoApi = CryptoPrice()
-
-    # Fetch and save historical data to MongoDB
     cryptoApi.fetchCoinsData()
