@@ -70,7 +70,13 @@ class RedditScraper:
             if after:
                 params['after'] = after
             
-            data = self.getSubredditPosts(subreddit, sort, limit, after)
+            try:
+                data = self.getSubredditPosts(subreddit, sort, limit, after)
+                
+            except Exception as e:
+                print(e)
+                continue
+            
             posts = data['children']
             
             if not posts:

@@ -17,10 +17,13 @@ class NewsOrchestratorAgent(Agent):
     class NotifyNewsSpecialists(OneShotBehaviour):
         async def run(self):
             
-            print(f"{AGENT_NAME} Notifying Reddit Scraper Agent to start...")
+            print(f"{AGENT_NAME} Notifying Reddit Posts Scraper Agent to start...")
             await sendMessage(self, "redditPosts", "start_agent")
             
-            print(f"{AGENT_NAME} Notifying Crypto Reddit Agent to start...") 
+            print(f"{AGENT_NAME} Notifying Articles Scraper Agent to start...") 
+            await sendMessage(self, "articlePosts", "start_agent")
+            
+            print(f"{AGENT_NAME} Notifying Forum Scraper Agent to start...") 
             
             
     class ReceiveRequestBehav(CyclicBehaviour):

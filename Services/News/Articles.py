@@ -9,7 +9,8 @@ from email.utils import parsedate_to_datetime
 
 class Articles:
     
-    def __init__(self):
+    def __init__(self, SHOW_LOGS=True):
+        self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         
         if not mongoDBURI:
@@ -26,7 +27,7 @@ class Articles:
         for data in self.allWebsiteArticles:
             allArticlesFromwebsite = self.fetchArticlesFromWebsite(data["journal"], data["url"])
             self.saveToMongo(allArticlesFromwebsite)
-            print(f"Fetched data from {data['journal']}")
+            if self.SHOW_LOGS: print(f"Fetched data from {data['journal']}")
     
     
     def fetchArticlesFromWebsite(self, websiteName, websiteURL):

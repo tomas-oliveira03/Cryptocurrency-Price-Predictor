@@ -1,19 +1,20 @@
-import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
-from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
+import asyncio
+
+from Services.News.Articles import Articles
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[38;5;205m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;5;196m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class CryptoPriceAgent(Agent):
-    
+class ArticleAgent(Agent):
+     
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.cryptoPrice = CryptoPrice(SHOW_LOGS=False)
+        self.articlesScraper = Articles(SHOW_LOGS=True)
         self.isJobRunning = False
             
 
@@ -32,34 +33,29 @@ class CryptoPriceAgent(Agent):
                         else:
                             self.agent.isJobRunning = True
                             oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=oneDayInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicArticlePostsCheck(period=oneDayInSeconds)
                             self.agent.add_behaviour(periodicJobBehavior)
-                        
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
 
-    class PeriodicPriceCheck(PeriodicBehaviour):
+    class PeriodicArticlePostsCheck(PeriodicBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Running periodic crypto price...")
+            print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
                 loop = asyncio.get_event_loop()
-                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchCoinsData)
-                # print(f"{AGENT_NAME} Crypto prices data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
-
+                # await loop.run_in_executor(None, self.agent.articlesScraper.fetchAllWebsiteArticlesContent)
                 payload = {
-                    "databaseCollectionName": "crypto-price" 
+                    "databaseCollectionName": "articles" 
                 }
                 
-                await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
+                await sendMessage(self, "newsOrchestrator", "job_finished", payload)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
                 return
                 
-            
-
 
     async def setup(self):
         print(f"{AGENT_NAME} Starting...")

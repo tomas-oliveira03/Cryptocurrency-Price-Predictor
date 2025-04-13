@@ -42,7 +42,7 @@ class FearGreedIndexAgent(Agent):
 
     class PeriodicIndexCheck(PeriodicBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Running periodic crypto price check...")
+            print(f"{AGENT_NAME} Running periodic fear-greed index...")
             try:
                 loop = asyncio.get_event_loop()
                 # numberOfInsertions = await loop.run_in_executor(None, self.agent.fearGreedIndex.fetchFearGreedIndexData)

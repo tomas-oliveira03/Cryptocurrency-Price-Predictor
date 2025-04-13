@@ -32,16 +32,16 @@ class RedditAgent(Agent):
                         else:
                             self.agent.isJobRunning = True
                             oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=oneDayInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicRedditPostsCheck(period=oneDayInSeconds)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
 
-    class PeriodicPriceCheck(PeriodicBehaviour):
+    class PeriodicRedditPostsCheck(PeriodicBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Running periodic crypto price check...")
+            print(f"{AGENT_NAME} Running periodic reddit scraper...")
             try:
                 loop = asyncio.get_event_loop()
                 # await loop.run_in_executor(None, self.agent.redditScraper.processAllSubreddits)
