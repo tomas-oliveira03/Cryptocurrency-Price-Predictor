@@ -16,7 +16,9 @@ class NewsOrchestratorAgent(Agent):
     class NotifyNewsSpecialists(OneShotBehaviour):
         async def run(self):
             
-            print(f"{AGENT_NAME} Notifying Crypto Articles Agent to start...")
+            print(f"{AGENT_NAME} Notifying Reddit Scraper Agent to start...")
+            await sendMessage(self, "redditPosts", "start_agent")
+            
             print(f"{AGENT_NAME} Notifying Crypto Reddit Agent to start...") 
             
             

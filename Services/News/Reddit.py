@@ -7,8 +7,10 @@ from bson.codec_options import CodecOptions
 
 class RedditScraper:
     
-    def __init__(self):
+    def __init__(self, SHOW_LOGS=True):
         load_dotenv()
+        
+        self.SHOW_LOGS=SHOW_LOGS
         self.redditClientID = os.getenv("REDDIT_CLIENT_ID")
         self.redditSecretKey = os.getenv("REDDIT_SECRET_KEY")
         self.redditUsername = os.getenv("REDDIT_USERNAME")
@@ -72,7 +74,6 @@ class RedditScraper:
             posts = data['children']
             
             if not posts:
-                print("No more posts.")
                 break
             
             for post in posts:
@@ -119,18 +120,18 @@ class RedditScraper:
 
                 self.mongoCollection.insert_one(post_document)
 
-            print(f"Page {page+1} done. Inserted {addedPosts} posts, updated {updatedPosts} posts.")
+            if self.SHOW_LOGS: print(f"Page {page+1} done. Inserted {addedPosts} posts, updated {updatedPosts} posts.")
+            
             if not after:
-                print("No more pages.")
                 break
         
         
     def processAllSubreddits(self):
         for subreddit in self.allSubreddits:
             
-            print("Scraping subreddit: ", subreddit)
+            if self.SHOW_LOGS: print("Scraping subreddit: ", subreddit)
             self.processSubredditData(subreddit=subreddit, sort="new")
-            print("=====\n\n")
+            if self.SHOW_LOGS: print("=====\n\n")
         
         
     def getAllSubreddits(self):

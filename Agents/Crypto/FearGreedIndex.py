@@ -44,8 +44,7 @@ class FearGreedIndexAgent(Agent):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
                 # numberOfInsertions = self.agent.fearGreedIndex.fetchFearGreedIndexData()
-                numberOfInsertions = 9999
-                print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
+                # print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
 
                 payload = {
                     "databaseCollectionName": "crypto-fear-greed" 
