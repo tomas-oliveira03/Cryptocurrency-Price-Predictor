@@ -20,7 +20,7 @@ class Forum:
 
         # Database connection
         mongoClient = MongoClient(mongoDBURI)
-        self.mongoCollection = mongoClient['ASM'].get_collection('aaaa', codec_options=CodecOptions(tz_aware=True))
+        self.mongoCollection = mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
 
         self.headers = {
             'User-Agent': 'Python CryptoPanic API Client',

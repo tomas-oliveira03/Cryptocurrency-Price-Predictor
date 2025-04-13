@@ -102,3 +102,4 @@ if __name__ == "__main__":
     sentimentAnalysis = SentimentAnalysis()
     sentimentAnalysis.analyzeSentimentsForAllCollections("reddit")
     sentimentAnalysis.analyzeSentimentsForAllCollections("articles")
+    sentimentAnalysis.analyzeSentimentsForAllCollections("forum")
