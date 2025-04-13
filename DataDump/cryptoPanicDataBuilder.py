@@ -15,6 +15,7 @@ def read_csv(file_path):
         print(f"Error reading {file_path}: {e}")
         raise
 
+
 def save_to_mongo(data):
     mongoClient = MongoClient("mongodb://localhost:27017/")
     mongoCollection = mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
@@ -32,6 +33,7 @@ def save_to_mongo(data):
             for item in batch
         ]
         mongoCollection.bulk_write(operations)
+
 
 def create_merged_json():
     # Define file paths

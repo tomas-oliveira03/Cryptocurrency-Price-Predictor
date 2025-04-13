@@ -43,8 +43,8 @@ class FearGreedIndexAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
-                numberOfInsertions = self.agent.fearGreedIndex.fetchFearGreedIndexData()
-                # numberOfInsertions = 9999
+                # numberOfInsertions = self.agent.fearGreedIndex.fetchFearGreedIndexData()
+                numberOfInsertions = 9999
                 print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
 
                 payload = {
@@ -56,8 +56,6 @@ class FearGreedIndexAgent(Agent):
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
                 return
-                
-            
 
 
     async def setup(self):

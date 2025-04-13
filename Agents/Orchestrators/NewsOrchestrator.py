@@ -31,8 +31,6 @@ class NewsOrchestratorAgent(Agent):
                         
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
-        
-
 
 
     async def setup(self):

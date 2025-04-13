@@ -7,7 +7,6 @@ from Agents.utils.messageHandler import sendMessage
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[34m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-
 class GlobalOrchestratorAgent(Agent):
     
     def __init__(self, jid, password, spadeDomain):

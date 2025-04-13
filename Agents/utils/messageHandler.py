@@ -9,3 +9,4 @@ async def sendMessage(agentInstance, destinationAgent, performative, payload=Non
         msg.body = json.dumps(payload)
         
     await agentInstance.send(msg)    
+    
