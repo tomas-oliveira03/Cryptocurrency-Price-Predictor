@@ -1,3 +1,4 @@
+import json
 import os
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
@@ -31,6 +32,12 @@ class NewsOrchestratorAgent(Agent):
                     case "start_agent":
                         self.agent.add_behaviour(self.agent.NotifyNewsSpecialists())
                         
+                    case "job_finished":
+                        payload = json.loads(msg.body)
+                        payload["providerAgentName"] = "NewsOrchestrator"
+                        print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
+                        await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
 

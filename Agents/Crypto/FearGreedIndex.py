@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from spade.agent import Agent
@@ -43,7 +44,8 @@ class FearGreedIndexAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
-                # numberOfInsertions = self.agent.fearGreedIndex.fetchFearGreedIndexData()
+                loop = asyncio.get_event_loop()
+                # numberOfInsertions = await loop.run_in_executor(None, self.agent.fearGreedIndex.fetchFearGreedIndexData)
                 # print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
 
                 payload = {

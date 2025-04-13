@@ -35,6 +35,7 @@ class CryptoOrchestratorAgent(Agent):
                     case "job_finished":
                         payload = json.loads(msg.body)
                         payload["providerAgentName"] = "CryptoOrchestrator"
+                        print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
                         await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
 
                     case _:

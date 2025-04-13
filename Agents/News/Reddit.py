@@ -1,10 +1,9 @@
-import json
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
-from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
 from Services.News.Reddit import RedditScraper
+import asyncio
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;208m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -14,7 +13,7 @@ class RedditAgent(Agent):
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.redditScraper = RedditScraper(SHOW_LOGS=True)
+        self.redditScraper = RedditScraper(SHOW_LOGS=False)
         self.isJobRunning = False
             
 
@@ -44,12 +43,13 @@ class RedditAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
-                self.agent.redditScraper.processAllSubreddits()
+                loop = asyncio.get_event_loop()
+                # await loop.run_in_executor(None, self.agent.redditScraper.processAllSubreddits)
                 payload = {
                     "databaseCollectionName": "reddit" 
                 }
                 
-                await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
+                await sendMessage(self, "newsOrchestrator", "job_finished", payload)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

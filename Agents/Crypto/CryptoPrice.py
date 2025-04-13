@@ -1,4 +1,4 @@
-import json
+import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
@@ -6,7 +6,7 @@ from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[38;5;208m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;5;205m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
 class CryptoPriceAgent(Agent):
     
@@ -44,7 +44,8 @@ class CryptoPriceAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
-                # numberOfInsertions = self.agent.cryptoPrice.fetchCoinsData()
+                loop = asyncio.get_event_loop()
+                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchCoinsData)
                 # print(f"{AGENT_NAME} Crypto prices data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
 
                 payload = {
