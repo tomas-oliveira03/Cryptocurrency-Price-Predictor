@@ -1,13 +1,13 @@
 import asyncio
-import json
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
+from Agents.utils.cron import cronExpression
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[38;5;129m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;5;198m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
 class CryptoPriceAgent(Agent):
     
@@ -32,8 +32,7 @@ class CryptoPriceAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            oneHourInSeconds = 60*60
-                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=oneHourInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=cronExpression["EVERY_10_MINUTES"])
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:

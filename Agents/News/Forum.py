@@ -1,9 +1,10 @@
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
-from Agents.utils.messageHandler import sendMessage
 import asyncio
 from Services.News.Forum import Forum
+from Agents.utils.messageHandler import sendMessage
+from Agents.utils.cron import cronExpression
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;22m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -31,8 +32,7 @@ class ForumAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicForumPostsCheck(period=oneDayInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicForumPostsCheck(period=cronExpression["EVERY_DAY"])
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:

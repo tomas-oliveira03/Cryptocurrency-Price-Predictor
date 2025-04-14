@@ -1,10 +1,10 @@
 import asyncio
-import json
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.Crypto.FearGreedIndex import FearGreedIndex
 from Agents.utils.messageHandler import sendMessage
+from Agents.utils.cron import cronExpression
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;129m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -32,8 +32,7 @@ class FearGreedIndexAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicIndexCheck(period=oneDayInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicIndexCheck(period=cronExpression["EVERY_DAY"])
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
