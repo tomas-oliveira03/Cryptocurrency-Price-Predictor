@@ -16,10 +16,9 @@ class DetailedCryptoData:
         
         self.SHOW_LOGS=SHOW_LOGS
         self.coinDeskAPIKey = os.getenv("COINDESK_API_KEY")
-        self.coinMarketCapAPIKey = os.getenv('COINMARKETCAP_API_KEY')
         self.currencySymbol = "USD" 
     
-        if(not self.coinDeskAPIKey or not self.coinMarketCapAPIKey):
+        if(not self.coinDeskAPIKey):
             raise ValueError("Please set the COINDESK_KEY and COINMARKETCAP_KEY environment variables first.")
         
         mongoDBURI = os.getenv("MONGODB_URI")
