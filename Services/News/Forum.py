@@ -6,6 +6,10 @@ import requests
 import os
 from typing import Dict, List, Optional
 import time
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.cryptoCoinsInfo import getTopCoins
 
 class Forum:
     
@@ -32,7 +36,8 @@ class Forum:
     
     
     def getAllInformation(self):
-        listOfCryptoCurrencies = [None, 'BTC', 'ETH', 'USDT', 'XRP', 'BNB', 'SOL', 'USDC', 'DOGE', 'TRX', 'ADA']
+        topCoins = getTopCoins()
+        listOfCryptoCurrencies = [None] + topCoins
         listOfFilters = ['rising', 'hot', 'bullish', 'bearish', 'important', 'saved', 'lol']
         listOfKindOfInfo = ['news', 'media']
             

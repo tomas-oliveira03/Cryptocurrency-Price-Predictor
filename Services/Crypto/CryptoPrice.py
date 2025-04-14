@@ -5,6 +5,10 @@ import pytz
 import requests
 from dotenv import load_dotenv
 from datetime import datetime
+import sys
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.cryptoCoinsInfo import getTopCoins
 
 class CryptoPrice:
     def __init__(self, SHOW_LOGS=True):
@@ -68,37 +72,10 @@ class CryptoPrice:
         else:
             if self.SHOW_LOGS: print(f"Failed to fetch data: {response.status_code}")
             return None
-        
-    
-    def getTopCoins(self, topK=10):
-        url = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest"
-        headers = {
-            'X-CMC_PRO_API_KEY': self.coinMarketCapAPIKey, 
-            'Accept': 'application/json'
-        }
-
-        params = {
-            'limit': topK,                        # Top K coins
-            'convert': self.currencySymbol,       # Convert prices to USD
-            'sort': 'market_cap',                 # Sort by market cap
-        }
-        
-        response = requests.get(url, headers=headers, params=params)
-        
-        if response.status_code == 200:
-            coins = response.json().get('data', [])
-            topCoins = [coin['symbol'] for coin in coins]  # Get the symbol of the top 10 coins
-            return topCoins
-        else:
-            if self.SHOW_LOGS: print(f"Error fetching CoinMarketCap data: {response.status_code}")
-            return []
-
 
     def fetchCoinsData(self):
         # Get top coins by market cap
-        topCoins = self.getTopCoins()
-        if not topCoins:
-            raise ValueError("Failed to fetch top coins.")
+        topCoins = getTopCoins()
         
         if self.SHOW_LOGS: print(f"Top 10 traded coins: {topCoins}")
 
