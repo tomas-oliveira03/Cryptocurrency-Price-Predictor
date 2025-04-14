@@ -22,6 +22,9 @@ class CryptoOrchestratorAgent(Agent):
             print(f"{AGENT_NAME} Notifying FearGreedIndex Agent to start...") 
             await sendMessage(self, "fearGreedIndex", "start_agent")
             
+            print(f"{AGENT_NAME} Notifying CryptoPrice Agent to start...") 
+            await sendMessage(self, "cryptoPrice", "start_agent")
+            
             
     class ReceiveRequestBehav(CyclicBehaviour):
         async def run(self):

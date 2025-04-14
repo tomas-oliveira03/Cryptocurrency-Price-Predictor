@@ -1,19 +1,20 @@
+import asyncio
+import json
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
+from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
-import asyncio
-from Services.News.Forum import Forum
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[38;5;22m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;5;129m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class ForumAgent(Agent):
-     
+class CryptoPriceAgent(Agent):
+    
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.forumScraper = Forum(SHOW_LOGS=True)
+        self.cryptoPrice = CryptoPrice(SHOW_LOGS=False)
         self.isJobRunning = False
             
 
@@ -31,30 +32,32 @@ class ForumAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicForumPostsCheck(period=oneDayInSeconds)
+                            oneHourInSeconds = 60*60
+                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=oneHourInSeconds)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
 
-    class PeriodicForumPostsCheck(PeriodicBehaviour):
+    class PeriodicPriceCheck(PeriodicBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Running periodic forum scraper...")
+            print(f"{AGENT_NAME} Running periodic crypto price...")
             try:
                 loop = asyncio.get_event_loop()
-                # await loop.run_in_executor(None, self.agent.forumScraper.getAllInformation)
+                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
+                # print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
+
                 payload = {
-                    "databaseCollectionName": "forum" 
+                    "databaseCollectionName": "crypto-price" 
                 }
                 
-                await sendMessage(self, "newsOrchestrator", "job_finished", payload)
+                await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
                 return
-                
+
 
     async def setup(self):
         print(f"{AGENT_NAME} Starting...")

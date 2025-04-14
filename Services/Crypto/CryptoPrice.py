@@ -10,7 +10,7 @@ import requests
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.cryptoCoinsInfo import getTickerToFullNameMap, getFullNameToTickerMap
 
-class DetailedCryptoData:
+class CryptoPrice:
     def __init__(self, SHOW_LOGS=True):
         load_dotenv()
         
@@ -73,5 +73,5 @@ class DetailedCryptoData:
 
 
 if __name__ == "__main__":
-    detailedCryptoData = DetailedCryptoData()
+    detailedCryptoData = CryptoPrice()
     data = detailedCryptoData.fetchTopCoinsPrices()

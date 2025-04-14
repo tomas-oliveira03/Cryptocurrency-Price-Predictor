@@ -42,7 +42,7 @@ class ArticlesAgent(Agent):
 
     class PeriodicArticlePostsCheck(PeriodicBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Running periodic crypto price check...")
+            print(f"{AGENT_NAME} Running periodic articles scraper...")
             try:
                 loop = asyncio.get_event_loop()
                 # await loop.run_in_executor(None, self.agent.articlesScraper.fetchAllWebsiteArticlesContent)

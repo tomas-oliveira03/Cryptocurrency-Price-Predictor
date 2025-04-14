@@ -32,7 +32,7 @@ class DetailedCryptoDataAgent(Agent):
                         else:
                             self.agent.isJobRunning = True
                             oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=oneDayInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicDetailedDataCheck(period=oneDayInSeconds)
                             self.agent.add_behaviour(periodicJobBehavior)
                         
                 
@@ -40,13 +40,13 @@ class DetailedCryptoDataAgent(Agent):
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
 
-    class PeriodicPriceCheck(PeriodicBehaviour):
+    class PeriodicDetailedDataCheck(PeriodicBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Running periodic crypto price...")
+            print(f"{AGENT_NAME} Running periodic crypto data...")
             try:
                 loop = asyncio.get_event_loop()
                 # numberOfInsertions = await loop.run_in_executor(None, self.agent.detailedCryptoData.fetchCoinsDataFullAnalysis)
-                # print(f"{AGENT_NAME} Crypto prices data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
+                # print(f"{AGENT_NAME} Crypto data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
 
                 payload = {
                     "databaseCollectionName": "detailed-crypto-data" 

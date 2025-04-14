@@ -5,6 +5,7 @@ import asyncio
 import os
 from dotenv import load_dotenv
 import spade
+from Agents.Crypto.CryptoPrice import CryptoPriceAgent
 from Agents.Crypto.DetailedCryptoData import DetailedCryptoDataAgent
 from Agents.Crypto.FearGreedIndex import FearGreedIndexAgent
 from Agents.News.Articles import ArticlesAgent
@@ -32,6 +33,7 @@ async def main():
     
     detailedCryptoDataAgent = DetailedCryptoDataAgent(f"detailedCryptoData@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     fearGreedIndexAgent = FearGreedIndexAgent(f"fearGreedIndex@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    cryptoPriceAgent = CryptoPriceAgent(f"cryptoPrice@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
     sentimentAnalysisAgent = SentimentAnalysisAgent(f"sentimentAnalysis@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
@@ -48,12 +50,12 @@ async def main():
     
     await detailedCryptoDataAgent.start(auto_register=True)
     await fearGreedIndexAgent.start(auto_register=True)
+    await cryptoPriceAgent.start(auto_register=True)
     
     await newsOrchestratorAgent.start(auto_register=True)
     await cryptoOrchestratorAgent.start(auto_register=True)
     await globalOrchestratorAgent.start(auto_register=True)
     
-
     await spade.wait_until_finished(globalOrchestratorAgent)
     await spade.wait_until_finished(cryptoOrchestratorAgent)
     await spade.wait_until_finished(newsOrchestratorAgent)
