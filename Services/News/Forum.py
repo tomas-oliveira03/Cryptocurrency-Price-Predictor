@@ -1,3 +1,4 @@
+from datetime import datetime
 from bson import CodecOptions
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
@@ -8,8 +9,10 @@ import time
 
 class Forum:
     
-    def __init__(self):
+    def __init__(self, SHOW_LOGS=True):
         load_dotenv()
+        
+        self.SHOW_LOGS=SHOW_LOGS
         self.cryptoPanicAPIKey = os.getenv("CRYPTOPANIC_API_KEY")
         if not self.cryptoPanicAPIKey:
             raise ValueError("Please set cryptoPanicAPIKey environment variable first.")
@@ -45,14 +48,14 @@ class Forum:
                         
                         dataProcessed = self.processData(cryptoNews)
                         self.saveToMongo(dataProcessed)
-                        print("Latest news", len(dataProcessed))
+                        if self.SHOW_LOGS: print(f"Latest news fetched for Crypto:{crypto}, Filter:{filter}, Kind:{kind}")
                         
                     except Exception as e:
-                        print(f"Exception: {e}")
+                        if self.SHOW_LOGS: print(f"Exception: {e}")
                     
                     time.sleep(0.3)
             
-        print("Finished fetching all information.")
+        if self.SHOW_LOGS: print("Finished fetching all information.")
     
     
     def getPostsByFilter(self, 
@@ -127,7 +130,7 @@ class Forum:
                     newResult['id'] = result['id']
 
                 if 'created_at' in result:
-                    newResult['created_at'] = result['created_at']
+                    newResult['created_at'] = datetime.fromisoformat(result['created_at'].replace("Z", "+00:00"))
                 
                 if 'currencies' in result:
                     newResult['currencies'] = result['currencies']

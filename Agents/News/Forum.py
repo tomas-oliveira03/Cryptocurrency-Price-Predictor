@@ -3,18 +3,17 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Agents.utils.messageHandler import sendMessage
 import asyncio
-
-from Services.News.Articles import Articles
+from Services.News.Forum import Forum
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[38;5;196m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;5;22m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class ArticlesAgent(Agent):
+class ForumAgent(Agent):
      
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.articlesScraper = Articles(SHOW_LOGS=False)
+        self.forumScraper = Forum(SHOW_LOGS=True)
         self.isJobRunning = False
             
 
@@ -33,21 +32,21 @@ class ArticlesAgent(Agent):
                         else:
                             self.agent.isJobRunning = True
                             oneDayInSeconds = 24*60*60
-                            periodicJobBehavior = self.agent.PeriodicArticlePostsCheck(period=oneDayInSeconds)
+                            periodicJobBehavior = self.agent.PeriodicForumPostsCheck(period=oneDayInSeconds)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
 
-    class PeriodicArticlePostsCheck(PeriodicBehaviour):
+    class PeriodicForumPostsCheck(PeriodicBehaviour):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic crypto price check...")
             try:
                 loop = asyncio.get_event_loop()
-                # await loop.run_in_executor(None, self.agent.articlesScraper.fetchAllWebsiteArticlesContent)
+                # await loop.run_in_executor(None, self.agent.forumScraper.getAllInformation)
                 payload = {
-                    "databaseCollectionName": "articles" 
+                    "databaseCollectionName": "forum" 
                 }
                 
                 await sendMessage(self, "newsOrchestrator", "job_finished", payload)

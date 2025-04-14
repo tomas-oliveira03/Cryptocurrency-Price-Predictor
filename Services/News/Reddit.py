@@ -74,7 +74,7 @@ class RedditScraper:
                 data = self.getSubredditPosts(subreddit, sort, limit, after)
                 
             except Exception as e:
-                print(e)
+                if self.SHOW_LOGS: print(e)
                 continue
             
             posts = data['children']

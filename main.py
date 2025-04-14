@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 import spade
 from Agents.Crypto.CryptoPrice import CryptoPriceAgent
 from Agents.Crypto.FearGreedIndex import FearGreedIndexAgent
-from Agents.News.Articles import ArticleAgent
+from Agents.News.Articles import ArticlesAgent
+from Agents.News.Forum import ForumAgent
 from Agents.News.Reddit import RedditAgent
 from Agents.Orchestrators.GlobalOrchestrator import GlobalOrchestratorAgent
 from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
@@ -35,13 +36,15 @@ async def main():
     sentimentAnalysisAgent = SentimentAnalysisAgent(f"sentimentAnalysis@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
     redditAgent = RedditAgent(f"redditPosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
-    articlesAgent = ArticleAgent(f"articlePosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    articlesAgent = ArticlesAgent(f"articlePosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    forumAgent = ForumAgent(f"forumPosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
     
     await sentimentAnalysisAgent.start(auto_register=True)
     
     await redditAgent.start(auto_register=True)
     await articlesAgent.start(auto_register=True)
+    await forumAgent.start(auto_register=True)
     
     await cryptoPriceAgent.start(auto_register=True)
     await fearGreedIndexAgent.start(auto_register=True)

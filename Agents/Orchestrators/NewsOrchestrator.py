@@ -24,6 +24,7 @@ class NewsOrchestratorAgent(Agent):
             await sendMessage(self, "articlePosts", "start_agent")
             
             print(f"{AGENT_NAME} Notifying Forum Scraper Agent to start...") 
+            await sendMessage(self, "forumPosts", "start_agent")
             
             
     class ReceiveRequestBehav(CyclicBehaviour):
