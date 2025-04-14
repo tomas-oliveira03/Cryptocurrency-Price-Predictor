@@ -4,7 +4,7 @@ from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.News.Reddit import RedditScraper
 import asyncio
 from Agents.utils.messageHandler import sendMessage
-from Agents.utils.cron import cronExpression
+from Agents.utils.cron import CronExpression
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;208m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -32,7 +32,7 @@ class RedditAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            periodicJobBehavior = self.agent.PeriodicRedditPostsCheck(period=cronExpression["EVERY_HOUR"])
+                            periodicJobBehavior = self.agent.PeriodicRedditPostsCheck(period=CronExpression.EVERY_HOUR.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:

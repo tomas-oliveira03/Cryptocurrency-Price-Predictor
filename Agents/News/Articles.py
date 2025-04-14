@@ -4,7 +4,7 @@ from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 import asyncio
 from Services.News.Articles import Articles
 from Agents.utils.messageHandler import sendMessage
-from Agents.utils.cron import cronExpression
+from Agents.utils.cron import CronExpression
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;196m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -32,7 +32,7 @@ class ArticlesAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            periodicJobBehavior = self.agent.PeriodicArticlePostsCheck(period=cronExpression["EVERY_HOUR"])
+                            periodicJobBehavior = self.agent.PeriodicArticlePostsCheck(period=CronExpression.EVERY_HOUR.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:

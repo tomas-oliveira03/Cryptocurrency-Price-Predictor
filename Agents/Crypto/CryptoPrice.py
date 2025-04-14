@@ -4,7 +4,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
-from Agents.utils.cron import cronExpression
+from Agents.utils.cron import CronExpression
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;198m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -32,7 +32,7 @@ class CryptoPriceAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=cronExpression["EVERY_10_MINUTES"])
+                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=CronExpression.EVERY_10_MINUTES.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
