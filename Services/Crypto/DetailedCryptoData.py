@@ -10,7 +10,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.cryptoCoinsInfo import getTopCoins
 
-class CryptoPrice:
+class DetailedCryptoData:
     def __init__(self, SHOW_LOGS=True):
         load_dotenv()
         
@@ -28,7 +28,7 @@ class CryptoPrice:
 
         # MongoDB connection
         mongoClient = MongoClient(mongoDBURI)
-        self.mongoCollection = mongoClient['ASM'].get_collection('crypto-price', codec_options=CodecOptions(tz_aware=True))
+        self.mongoCollection = mongoClient['ASM'].get_collection('detailed-crypto-data', codec_options=CodecOptions(tz_aware=True))
 
 
     def fetchHistoricalData(self, coinSymbol, limit=365):
@@ -73,7 +73,7 @@ class CryptoPrice:
             if self.SHOW_LOGS: print(f"Failed to fetch data: {response.status_code}")
             return None
 
-    def fetchCoinsData(self):
+    def fetchCoinsDataFullAnalysis(self):
         # Get top coins by market cap
         topCoins = getTopCoins()
         
@@ -113,5 +113,5 @@ class CryptoPrice:
 
 
 if __name__ == "__main__":
-    cryptoApi = CryptoPrice()
-    cryptoApi.fetchCoinsData()
+    cryptoData = DetailedCryptoData()
+    cryptoData.fetchCoinsDataFullAnalysis()

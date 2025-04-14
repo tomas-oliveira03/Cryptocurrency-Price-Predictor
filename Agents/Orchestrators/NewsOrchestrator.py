@@ -39,8 +39,8 @@ class NewsOrchestratorAgent(Agent):
                     case "job_finished":
                         payload = json.loads(msg.body)
                         payload["providerAgentName"] = "NewsOrchestrator"
-                        print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
-                        await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+                        print(f"{AGENT_NAME} Redirecting message to Sentiment Analysis Agent...")
+                        await sendMessage(self, "sentimentAnalysis", "new_data_to_analyze", payload)
 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")

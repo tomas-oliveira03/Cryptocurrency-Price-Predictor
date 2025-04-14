@@ -26,7 +26,6 @@ class SentimentAnalysisAgent(Agent):
                         print(f"{AGENT_NAME} Ready to receive information...")
                         
                     case "new_data_to_analyze":
-                        print(f"{AGENT_NAME} Analyzing new data...")
                         payload = json.loads(msg.body)
                         databaseCollectionName = payload.get("databaseCollectionName")
                         providerAgentName = payload.get("providerAgentName")
@@ -36,8 +35,9 @@ class SentimentAnalysisAgent(Agent):
                             return
                         
                         # Analyze data                        
+                        print(f"{AGENT_NAME} Analyzing new data for {databaseCollectionName}...")
                         try:
-                            self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
+                            # self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
                             
                             payload["providerAgentName"] = "SentimentAnalysis"
                             await sendMessage(self, "globalOrchestrator", "new_data_available", payload)

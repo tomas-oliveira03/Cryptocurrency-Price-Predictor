@@ -2,18 +2,18 @@ import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
-from Services.Crypto.CryptoPrice import CryptoPrice
+from Services.Crypto.DetailedCryptoData import DetailedCryptoData
 from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;205m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class CryptoPriceAgent(Agent):
+class DetailedCryptoDataAgent(Agent):
     
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.cryptoPrice = CryptoPrice(SHOW_LOGS=False)
+        self.detailedCryptoData = DetailedCryptoData(SHOW_LOGS=False)
         self.isJobRunning = False
             
 
@@ -45,11 +45,11 @@ class CryptoPriceAgent(Agent):
             print(f"{AGENT_NAME} Running periodic crypto price...")
             try:
                 loop = asyncio.get_event_loop()
-                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchCoinsData)
+                # numberOfInsertions = await loop.run_in_executor(None, self.agent.detailedCryptoData.fetchCoinsDataFullAnalysis)
                 # print(f"{AGENT_NAME} Crypto prices data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
 
                 payload = {
-                    "databaseCollectionName": "crypto-price" 
+                    "databaseCollectionName": "detailed-crypto-data" 
                 }
                 
                 await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)

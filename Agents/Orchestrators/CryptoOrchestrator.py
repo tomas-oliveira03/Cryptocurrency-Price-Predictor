@@ -16,8 +16,8 @@ class CryptoOrchestratorAgent(Agent):
             
     class NotifyCryptoSpecialists(OneShotBehaviour):
         async def run(self):
-            print(f"{AGENT_NAME} Notifying CryptoPrice Agent to start...")
-            await sendMessage(self, "cryptoPrice", "start_agent")
+            print(f"{AGENT_NAME} Notifying DetailedCryptoData Agent to start...")
+            await sendMessage(self, "detailedCryptoData", "start_agent")
             
             print(f"{AGENT_NAME} Notifying FearGreedIndex Agent to start...") 
             await sendMessage(self, "fearGreedIndex", "start_agent")

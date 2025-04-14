@@ -59,7 +59,7 @@ class CryptoPricePredictor:
             "cryptoCurrency": crypto_symbol,
             "date": {"$gte": start_date, "$lte": end_date}
         }
-        price_data = list(self.db["crypto-price"].find(price_query))
+        price_data = list(self.db["detailed-crypto-data"].find(price_query))
         price_df = pd.DataFrame(price_data)
         
         # Load fear & greed index
@@ -669,7 +669,7 @@ class CryptoPricePredictor:
             List of cryptocurrency symbols
         """
         # Query for all unique cryptocurrency symbols
-        unique_cryptos = self.db["crypto-price"].distinct("cryptoCurrency")
+        unique_cryptos = self.db["detailed-crypto-data"].distinct("cryptoCurrency")
         return sorted(unique_cryptos)
     
     def batch_predict(self, days_ahead: int = 7) -> Dict[str, pd.DataFrame]:
@@ -789,7 +789,7 @@ class CryptoPricePredictor:
             try:
                 # Get recent price data (last 30 days)
                 thirty_days_ago = datetime.now() - timedelta(days=30)
-                price_data = list(self.db["crypto-price"].find(
+                price_data = list(self.db["detailed-crypto-data"].find(
                     {
                         "cryptoCurrency": crypto,
                         "date": {"$gte": thirty_days_ago}
