@@ -530,7 +530,8 @@ class CryptoPricePredictor:
     def evaluate_model(self, df: pd.DataFrame, 
                        target_column: str = 'close',
                        forecast_horizon: int = 1,
-                       plot: bool = True) -> Dict:
+                       plot: bool = True,
+                       save_path: str = "model_evaluation.png") -> Dict:
         """
         Evaluate model performance and generate plots
         
@@ -539,6 +540,7 @@ class CryptoPricePredictor:
             target_column: Column to predict
             forecast_horizon: Number of days ahead to predict
             plot: Whether to generate performance plots
+            save_path: Path to save the evaluation plot
             
         Returns:
             Dictionary with evaluation metrics
@@ -584,7 +586,7 @@ class CryptoPricePredictor:
             plt.grid(True)
             plt.xticks(rotation=45)
             plt.tight_layout()
-            plt.savefig('model_evaluation.png')
+            plt.savefig(save_path)
             plt.close()
         
         return metrics
@@ -844,6 +846,304 @@ class CryptoPricePredictor:
             print("No valid data points for comparison in the backtest period.")
             return None
 
+    def get_market_overview(self) -> Dict:
+        """
+        Generate an overall market sentiment score from 1-100
+        
+        Returns:
+            Dictionary containing market overview metrics
+        """
+        all_cryptos = self.get_all_cryptocurrencies()
+        print(f"Analyzing {len(all_cryptos)} cryptocurrencies for market overview...")
+        
+        # Initialize metrics
+        price_changes = []
+        volume_changes = []
+        price_trends = []  # 1 for uptrend, 0 for neutral, -1 for downtrend
+        
+        # Get the latest fear and greed index
+        try:
+            latest_fear_greed = list(self.db["crypto-fear-greed"].find().sort("date", -1).limit(1))
+            if latest_fear_greed:
+                fear_greed_score = latest_fear_greed[0].get("value", 50)
+                fear_greed_classification = latest_fear_greed[0].get("classification", "Neutral")
+            else:
+                fear_greed_score = 50
+                fear_greed_classification = "Neutral (No data)"
+        except Exception as e:
+            print(f"Error fetching fear & greed data: {e}")
+            fear_greed_score = 50
+            fear_greed_classification = "Neutral (Error)"
+        
+        # Collect news and social media sentiment
+        try:
+            # Get recent news sentiment
+            one_week_ago = datetime.now() - timedelta(days=7)
+            recent_articles = list(self.db["articles"].find(
+                {"date": {"$gte": one_week_ago}}
+            ))
+            
+            article_sentiments = []
+            for article in recent_articles:
+                if "sentiment" in article and isinstance(article["sentiment"], dict) and "scores" in article["sentiment"]:
+                    article_sentiments.append(article["sentiment"]["scores"].get("compound", 0))
+            
+            avg_news_sentiment = sum(article_sentiments) / max(1, len(article_sentiments))
+            
+            # Get recent Reddit sentiment
+            recent_reddit = list(self.db["reddit"].find(
+                {"created_at": {"$gte": one_week_ago}}
+            ))
+            
+            reddit_sentiments = []
+            for post in recent_reddit:
+                if "sentiment" in post and isinstance(post["sentiment"], dict) and "scores" in post["sentiment"]:
+                    reddit_sentiments.append(post["sentiment"]["scores"].get("compound", 0))
+            
+            avg_reddit_sentiment = sum(reddit_sentiments) / max(1, len(reddit_sentiments))
+            
+        except Exception as e:
+            print(f"Error analyzing sentiment data: {e}")
+            avg_news_sentiment = 0
+            avg_reddit_sentiment = 0
+        
+        # Analyze price trends for top cryptocurrencies
+        for crypto in all_cryptos:
+            try:
+                # Get recent price data (last 30 days)
+                thirty_days_ago = datetime.now() - timedelta(days=30)
+                price_data = list(self.db["detailed-crypto-data"].find(
+                    {
+                        "cryptoCurrency": crypto,
+                        "date": {"$gte": thirty_days_ago}
+                    }
+                ).sort("date", 1))
+                
+                if len(price_data) >= 2:
+                    # Calculate price change percentage
+                    first_price = price_data[0]["close"]
+                    last_price = price_data[-1]["close"]
+                    price_change_pct = (last_price - first_price) / first_price * 100
+                    price_changes.append(price_change_pct)
+                    
+                    # Determine trend (simple moving average comparison)
+                    if len(price_data) >= 10:
+                        recent_prices = [p["close"] for p in price_data[-10:]]
+                        ma5 = sum(recent_prices[-5:]) / 5
+                        ma10 = sum(recent_prices) / 10
+                        
+                        if ma5 > ma10:
+                            price_trends.append(1)  # Uptrend
+                        elif ma5 < ma10:
+                            price_trends.append(-1)  # Downtrend
+                        else:
+                            price_trends.append(0)  # Neutral
+                    
+                    # Volume change
+                    if "volumefrom" in price_data[0] and "volumefrom" in price_data[-1]:
+                        first_volume = price_data[0]["volumefrom"]
+                        last_volume = price_data[-1]["volumefrom"]
+                        
+                        if first_volume > 0:
+                            volume_change_pct = (last_volume - first_volume) / first_volume * 100
+                            volume_changes.append(volume_change_pct)
+            
+            except Exception as e:
+                print(f"Error analyzing {crypto}: {e}")
+        
+        # Calculate overall market score (1-100)
+        # Components:
+        # - Price trends: 30%
+        # - Fear & Greed Index: 30%
+        # - News sentiment: 20%
+        # - Social media sentiment: 20%
+        
+        # Convert trend to a 0-100 scale
+        if price_trends:
+            trend_score = (sum(price_trends) / len(price_trends) + 1) * 50  # Convert -1,0,1 to 0,50,100
+        else:
+            trend_score = 50
+            
+        # Convert news sentiment from -1,1 to 0,100
+        news_score = (avg_news_sentiment + 1) * 50
+        
+        # Convert social sentiment from -1,1 to 0,100
+        social_score = (avg_reddit_sentiment + 1) * 50
+        
+        # Calculate weighted score
+        market_score = (
+            0.3 * trend_score + 
+            0.3 * fear_greed_score + 
+            0.2 * news_score + 
+            0.2 * social_score
+        )
+        
+        # Round to nearest integer
+        market_score = round(market_score)
+        
+        # Interpret the score
+        if market_score >= 80:
+            market_interpretation = "Extremely Bullish"
+        elif market_score >= 70:
+            market_interpretation = "Very Bullish"
+        elif market_score >= 60:
+            market_interpretation = "Bullish"
+        elif market_score >= 50:
+            market_interpretation = "Slightly Bullish"
+        elif market_score >= 40:
+            market_interpretation = "Slightly Bearish"
+        elif market_score >= 30:
+            market_interpretation = "Bearish"
+        elif market_score >= 20:
+            market_interpretation = "Very Bearish"
+        else:
+            market_interpretation = "Extremely Bearish"
+        
+        # Create result dictionary
+        overview = {
+            "market_score": market_score,
+            "interpretation": market_interpretation,
+            "components": {
+                "price_trend_score": trend_score,
+                "fear_greed_score": fear_greed_score,
+                "fear_greed_classification": fear_greed_classification,
+                "news_sentiment_score": news_score,
+                "social_sentiment_score": social_score
+            },
+            "metrics": {
+                "avg_price_change_pct": sum(price_changes) / max(1, len(price_changes)),
+                "avg_volume_change_pct": sum(volume_changes) / max(1, len(volume_changes))
+            },
+            "timestamp": datetime.now()
+        }
+        
+        return overview
+    
+    def generate_market_overview_chart(self, overview: Dict, save_path: str = "market_overview.png"):
+        """
+        Generate a visual chart for the market overview
+        
+        Args:
+            overview: Market overview dictionary
+            save_path: Path to save the chart
+        """
+        # Set up the figure
+        fig, axs = plt.subplots(2, 2, figsize=(12, 10))
+        fig.suptitle(f"Crypto Market Overview: {overview['interpretation']} ({overview['market_score']}/100)", 
+                    fontsize=16, fontweight='bold')
+        
+        # Create a gauge chart for the market score
+        ax_gauge = axs[0, 0]
+        score = overview['market_score']
+        
+        # Define colors for the gauge
+        if score >= 80:
+            color = 'darkgreen'
+        elif score >= 60:
+            color = 'limegreen'
+        elif score >= 40:
+            color = 'gold'
+        elif score >= 20:
+            color = 'orange'
+        else:
+            color = 'red'
+            
+        # Draw the gauge
+        ax_gauge.set_title("Market Sentiment Score", fontsize=14)
+        ax_gauge.add_patch(plt.Circle((0.5, 0), 0.4, fill=False, linewidth=2))
+        ax_gauge.add_patch(plt.Rectangle((0.1, 0), 0.8, 0.1, color='lightgrey'))
+        ax_gauge.add_patch(plt.Rectangle((0.1, 0), 0.8 * score/100, 0.1, color=color))
+        
+        # Add the score text
+        ax_gauge.text(0.5, -0.15, f"{score}/100", ha='center', va='center', fontsize=18, fontweight='bold')
+        ax_gauge.text(0.5, -0.25, overview['interpretation'], ha='center', va='center', fontsize=14)
+        
+        # Remove axes
+        ax_gauge.set_xlim(0, 1)
+        ax_gauge.set_ylim(-0.5, 0.5)
+        ax_gauge.axis('off')
+        
+        # Create bar chart for component scores
+        ax_components = axs[0, 1]
+        components = overview['components']
+        labels = ['Price Trends', 'Fear & Greed', 'News Sentiment', 'Social Sentiment']
+        values = [
+            components['price_trend_score'],
+            components['fear_greed_score'],
+            components['news_sentiment_score'],
+            components['social_sentiment_score']
+        ]
+        
+        colors = []
+        for v in values:
+            if v >= 80:
+                colors.append('darkgreen')
+            elif v >= 60:
+                colors.append('limegreen')
+            elif v >= 40:
+                colors.append('gold')
+            elif v >= 20:
+                colors.append('orange')
+            else:
+                colors.append('red')
+        
+        ax_components.bar(labels, values, color=colors)
+        ax_components.set_title("Component Scores", fontsize=14)
+        ax_components.set_ylim(0, 100)
+        ax_components.set_ylabel("Score (0-100)")
+        ax_components.grid(axis='y', linestyle='--', alpha=0.7)
+        plt.setp(ax_components.get_xticklabels(), rotation=45)
+        
+        # Create text box with key metrics
+        ax_metrics = axs[1, 0]
+        ax_metrics.axis('off')
+        metrics_text = (
+            f"Fear & Greed Index: {components['fear_greed_score']} ({components['fear_greed_classification']})\n\n"
+            f"Average Price Change: {overview['metrics']['avg_price_change_pct']:.2f}%\n\n"
+            f"Average Volume Change: {overview['metrics']['avg_volume_change_pct']:.2f}%\n\n"
+            f"Generated on: {overview['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+        ax_metrics.text(0.5, 0.5, metrics_text, ha='center', va='center', fontsize=12,
+                       bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        ax_metrics.set_title("Key Metrics", fontsize=14)
+        
+        # Create interpretation guide
+        ax_guide = axs[1, 1]
+        ax_guide.axis('off')
+        guide_text = (
+            "Interpretation Guide:\n\n"
+            "80-100: Extremely Bullish - Strong buying opportunity\n"
+            "70-79: Very Bullish - Favorable market conditions\n"
+            "60-69: Bullish - Positive outlook\n"
+            "50-59: Slightly Bullish - Cautiously optimistic\n"
+            "40-49: Slightly Bearish - Some caution advised\n"
+            "30-39: Bearish - Negative outlook\n"
+            "20-29: Very Bearish - Unfavorable conditions\n"
+            "0-19: Extremely Bearish - High risk environment"
+        )
+        ax_guide.text(0.5, 0.5, guide_text, ha='center', va='center', fontsize=10,
+                     bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+        ax_guide.set_title("Market Score Interpretation", fontsize=14)
+        
+        plt.tight_layout()
+        plt.savefig(save_path)
+        plt.close()
+        
+        print(f"Market overview chart saved as {save_path}")
+        
+        return
+    
+    def get_all_cryptocurrencies(self) -> list:
+        """
+        Get a list of all cryptocurrencies available in the database
+        
+        Returns:
+            List of cryptocurrency symbols
+        """
+        # Query for all unique cryptocurrency symbols
+        unique_cryptos = self.db["detailed-crypto-data"].distinct("cryptoCurrency")
+        return sorted(unique_cryptos)
+    
 if __name__ == "__main__":
     # Initialize the predictor
     predictor = CryptoPricePredictor(db_connection_string="mongodb://localhost:27017/", db_name="ASM")
@@ -896,6 +1196,105 @@ if __name__ == "__main__":
             
             if backtest_results:
                 print("\nBacktest results saved as 'backtest_results.png'")
+                
+        elif operation == "major":
+            # Predict major cryptocurrencies: BTC, ETH, SOL, BNB
+            print("Predicting prices for major cryptocurrencies...")
+            major_cryptos = ["BTC", "ETH", "SOL", "BNB"]
+            predictions = {}
+            evaluation_results = {}
+            
+            for crypto in major_cryptos:
+                print(f"\n===== Analyzing {crypto} =====")
+                try:
+                    # Load and preprocess data
+                    data = predictor.load_data(crypto_symbol=crypto)
+                    processed_df = predictor.preprocess_data(data)
+                    
+                    if len(processed_df) < 10:
+                        print(f"Not enough data for {crypto}. Skipping.")
+                        continue
+                    
+                    # Train models and evaluate with custom output filenames
+                    print(f"Training and evaluating models for {crypto}...")
+                    metrics = predictor.evaluate_model(
+                        processed_df, 
+                        forecast_horizon=1, 
+                        plot=True,
+                        save_path=f"{crypto}_model_evaluation.png"
+                    )
+                    evaluation_results[crypto] = metrics
+                    print(f"Best model for {crypto}: {predictor.best_model}")
+                    print(f"Metrics: {metrics[predictor.best_model]}")
+                    
+                    # Get feature importance for this cryptocurrency
+                    importance = predictor.feature_importance()
+                    print(f"\nTop 5 most important features for {crypto}:")
+                    print(importance.head(5))
+                    
+                    # Make predictions
+                    print(f"\nPredicting prices for {crypto} for the next 5 days...")
+                    future_predictions = predictor.predict_future(processed_df, days_ahead=5)
+                    predictions[crypto] = future_predictions
+                    
+                    # Visualize predictions with historical data
+                    print(f"Creating visualization for {crypto}...")
+                    predictor.visualize_prediction_with_history(
+                        processed_df, 
+                        future_predictions, 
+                        history_days=15,
+                        save_path=f"{crypto}_prediction_visualization.png"
+                    )
+                    
+                    # Backtest for this cryptocurrency
+                    print(f"\nBacktesting {crypto} predictions...")
+                    backtest_results = predictor.backtest_previous_predictions(
+                        crypto_symbol=crypto, 
+                        backtest_days=5,
+                        save_path=f"{crypto}_backtest_results.png"
+                    )
+                    
+                    print(f"{crypto} evaluation saved as '{crypto}_model_evaluation.png'")
+                    print(f"{crypto} prediction visualization saved as '{crypto}_prediction_visualization.png'")
+                    print(f"{crypto} backtest results saved as '{crypto}_backtest_results.png'")
+                    
+                    # Reset models for next cryptocurrency
+                    predictor.models = {
+                        'xgboost': None,
+                        'random_forest': None,
+                        'lstm': None
+                    }
+                    predictor.best_model = None
+                
+                except Exception as e:
+                    print(f"Error analyzing {crypto}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # Print summary of all predictions
+            print("\n===== Major Cryptocurrencies Price Prediction Summary =====")
+            for crypto, pred_df in predictions.items():
+                if pred_df is not None and not pred_df.empty:
+                    latest_price = pred_df.iloc[0]['predicted_price']
+                    last_price = pred_df.iloc[-1]['predicted_price']
+                    change = (last_price - latest_price) / latest_price * 100
+                    direction = "🔺" if change > 0 else "🔻"
+                    print(f"{crypto}: {direction} {abs(change):.2f}% in 5 days (Last: {last_price:.4f})")
+            
+            # Generate global market overview
+            print("\n===== Global Market Overview =====")
+            try:
+                overview = predictor.get_market_overview()
+                print(f"Market Score: {overview['market_score']}/100 - {overview['interpretation']}")
+                print(f"Fear & Greed Index: {overview['components']['fear_greed_score']} ({overview['components']['fear_greed_classification']})")
+                print(f"Average Price Change: {overview['metrics']['avg_price_change_pct']:.2f}%")
+                print(f"Average Volume Change: {overview['metrics']['avg_volume_change_pct']:.2f}%")
+                
+                # Generate and save the chart
+                predictor.generate_market_overview_chart(overview, save_path="global_market_overview.png")
+                print("Global market overview chart saved as 'global_market_overview.png'")
+            except Exception as e:
+                print(f"Error generating market overview: {e}")
                 
         else:
             # Default: single cryptocurrency prediction
@@ -951,4 +1350,6 @@ if __name__ == "__main__":
         print(f"\nError occurred: {e}")
         import traceback
         traceback.print_exc()
+
+
 
