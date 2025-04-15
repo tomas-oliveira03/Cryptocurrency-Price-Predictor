@@ -2,8 +2,7 @@ import json
 
 class InformJobEnded:
     
-    def __init__(self, agentJid: str, databaseCollectionName: str, providerAgentName: str = None):
-        self.agentJid = agentJid
+    def __init__(self, databaseCollectionName: str, providerAgentName: str = None):
         self.databaseCollectionName = databaseCollectionName
         self.providerAgentName = providerAgentName
         
@@ -24,7 +23,6 @@ class InformJobEnded:
     
     def toString(self):
         return "InformJobEnded: " + json.dumps({
-            "agentJid": self.agentJid,
             "databaseCollectionName": self.databaseCollectionName,
             "providerAgentName": self.providerAgentName
         })

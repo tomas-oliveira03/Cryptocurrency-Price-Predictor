@@ -2,6 +2,7 @@ import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
+from Communication.InformJobEnded import InformJobEnded
 from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression, getSecondsUntilNextAlignedMark
@@ -16,6 +17,7 @@ class CryptoPriceAgent(Agent):
         self.spadeDomain = spadeDomain
         self.cryptoPrice = CryptoPrice(SHOW_LOGS=False)
         self.isJobRunning = False
+        self.informJobEnded = InformJobEnded("crypto-price")
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -33,9 +35,9 @@ class CryptoPriceAgent(Agent):
                         else:
                             self.agent.isJobRunning = True
                             
-                            delay = getSecondsUntilNextAlignedMark(CronExpression.EVERY_10_MINUTES)
-                            print(f"Waiting {delay} seconds to align with next 10-minute mark.")
-                            await asyncio.sleep(delay)
+                            # delay = getSecondsUntilNextAlignedMark(CronExpression.EVERY_10_MINUTES)
+                            # print(f"Waiting {delay} seconds to align with next 10-minute mark.")
+                            # await asyncio.sleep(delay)
                             
                             periodicJobBehavior = self.agent.PeriodicPriceCheck(period=CronExpression.EVERY_10_MINUTES.value)
                             self.agent.add_behaviour(periodicJobBehavior)
@@ -50,13 +52,9 @@ class CryptoPriceAgent(Agent):
             try:
                 loop = asyncio.get_event_loop()
                 # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
-                print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
-
-                payload = {
-                    "databaseCollectionName": "crypto-price" 
-                }
+                # print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
                 
-                await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
+                await sendMessage(self, "cryptoOrchestrator", "job_finished", self.agent.informJobEnded)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

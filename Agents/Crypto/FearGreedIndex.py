@@ -2,6 +2,7 @@ import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
+from Communication.InformJobEnded import InformJobEnded
 from Services.Crypto.FearGreedIndex import FearGreedIndex
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression
@@ -16,6 +17,7 @@ class FearGreedIndexAgent(Agent):
         self.spadeDomain = spadeDomain
         self.fearGreedIndex = FearGreedIndex(SHOW_LOGS=False)
         self.isJobRunning = False
+        self.informJobEnded = InformJobEnded("crypto-fear-greed")
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -46,12 +48,8 @@ class FearGreedIndexAgent(Agent):
                 loop = asyncio.get_event_loop()
                 # numberOfInsertions = await loop.run_in_executor(None, self.agent.fearGreedIndex.fetchFearGreedIndexData)
                 # print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
-
-                payload = {
-                    "databaseCollectionName": "crypto-fear-greed" 
-                }
                 
-                await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
+                await sendMessage(self, "cryptoOrchestrator", "job_finished", self.agent.informJobEnded)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

@@ -1,4 +1,4 @@
-import json
+import jsonpickle
 from spade.message import Message
 
 async def sendMessage(agentInstance, destinationAgent, performative, payload=None):
@@ -6,7 +6,7 @@ async def sendMessage(agentInstance, destinationAgent, performative, payload=Non
     msg.set_metadata("performative", performative)
     
     if payload:
-        msg.body = json.dumps(payload)
+        msg.body = jsonpickle.encode(payload)
         
     await agentInstance.send(msg)    
     

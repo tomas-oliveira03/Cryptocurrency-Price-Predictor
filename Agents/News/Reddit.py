@@ -3,6 +3,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.News.Reddit import RedditScraper
 import asyncio
+from Communication.InformJobEnded import InformJobEnded
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression
 
@@ -16,6 +17,7 @@ class RedditAgent(Agent):
         self.spadeDomain = spadeDomain
         self.redditScraper = RedditScraper(SHOW_LOGS=False)
         self.isJobRunning = False
+        self.informJobEnded = InformJobEnded("reddit")
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -45,11 +47,8 @@ class RedditAgent(Agent):
             try:
                 loop = asyncio.get_event_loop()
                 # await loop.run_in_executor(None, self.agent.redditScraper.processAllSubreddits)
-                payload = {
-                    "databaseCollectionName": "reddit" 
-                }
-                
-                await sendMessage(self, "newsOrchestrator", "job_finished", payload)
+
+                await sendMessage(self, "newsOrchestrator", "job_finished", self.agent.informJobEnded)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

@@ -2,6 +2,7 @@ import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
+from Communication.InformJobEnded import InformJobEnded
 from Services.Crypto.DetailedCryptoData import DetailedCryptoData
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression
@@ -16,6 +17,7 @@ class DetailedCryptoDataAgent(Agent):
         self.spadeDomain = spadeDomain
         self.detailedCryptoData = DetailedCryptoData(SHOW_LOGS=False)
         self.isJobRunning = False
+        self.informJobEnded = InformJobEnded("detailed-crypto-data")
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -47,12 +49,8 @@ class DetailedCryptoDataAgent(Agent):
                 loop = asyncio.get_event_loop()
                 # numberOfInsertions = await loop.run_in_executor(None, self.agent.detailedCryptoData.fetchCoinsDataFullAnalysis)
                 # print(f"{AGENT_NAME} Crypto data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
-
-                payload = {
-                    "databaseCollectionName": "detailed-crypto-data" 
-                }
                 
-                await sendMessage(self, "cryptoOrchestrator", "job_finished", payload)
+                await sendMessage(self, "cryptoOrchestrator", "job_finished", self.agent.informJobEnded)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

@@ -3,6 +3,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 import asyncio
 from Services.News.Articles import Articles
+from Communication.InformJobEnded import InformJobEnded
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression
 
@@ -16,6 +17,7 @@ class ArticlesAgent(Agent):
         self.spadeDomain = spadeDomain
         self.articlesScraper = Articles(SHOW_LOGS=False)
         self.isJobRunning = False
+        self.informJobEnded = InformJobEnded("articles")
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -45,11 +47,8 @@ class ArticlesAgent(Agent):
             try:
                 loop = asyncio.get_event_loop()
                 # await loop.run_in_executor(None, self.agent.articlesScraper.fetchAllWebsiteArticlesContent)
-                payload = {
-                    "databaseCollectionName": "articles" 
-                }
-                
-                await sendMessage(self, "newsOrchestrator", "job_finished", payload)
+
+                await sendMessage(self, "newsOrchestrator", "job_finished", self.agent.informJobEnded)
                                 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
