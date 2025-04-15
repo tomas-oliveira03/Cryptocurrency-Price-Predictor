@@ -49,7 +49,7 @@ class CryptoPriceAgent(Agent):
             print(f"{AGENT_NAME} Running periodic crypto price...")
             try:
                 loop = asyncio.get_event_loop()
-                numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
+                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
                 print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
 
                 payload = {
