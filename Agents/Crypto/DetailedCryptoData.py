@@ -46,7 +46,7 @@ class DetailedCryptoDataAgent(Agent):
             try:
                 loop = asyncio.get_event_loop()
                 # numberOfInsertions = await loop.run_in_executor(None, self.agent.detailedCryptoData.fetchCoinsDataFullAnalysis)
-                # print(f"{AGENT_NAME} Crypto data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
+                # print(f"{AGENT_NAME} Crypto data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
 
                 payload = {
                     "databaseCollectionName": "detailed-crypto-data" 

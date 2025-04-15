@@ -1,3 +1,4 @@
+import datetime
 from enum import Enum
 
 class CronExpression(Enum):
@@ -20,3 +21,16 @@ class CronExpression(Enum):
     EVERY_12_HOURS = 12 * 60 * 60
     
     EVERY_DAY = 1 * 24 * 60 * 60
+
+
+# Calculates seconds until X time interval (aligned with PC clock)
+# Example:
+# If current time is 12:07:32 and cronInterval is EVERY_10_MINUTES (600 seconds),
+# the function returns the number of seconds until 12:10:00 → 148 seconds.
+def getSecondsUntilNextAlignedMark(cronInterval: CronExpression) -> int:
+    now = datetime.datetime.now()
+    totalSeconds = int(now.timestamp())
+    intervalSeconds = cronInterval.value
+    remainder = totalSeconds % intervalSeconds
+    waitSeconds = (intervalSeconds - remainder) if remainder != 0 else 0
+    return waitSeconds

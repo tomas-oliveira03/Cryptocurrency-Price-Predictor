@@ -4,7 +4,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
-from Agents.utils.cron import CronExpression
+from Agents.utils.cron import CronExpression, getSecondsUntilNextAlignedMark
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;198m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -32,6 +32,11 @@ class CryptoPriceAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
+                            
+                            delay = getSecondsUntilNextAlignedMark(CronExpression.EVERY_10_MINUTES)
+                            print(f"Waiting {delay} seconds to align with next 10-minute mark.")
+                            await asyncio.sleep(delay)
+                            
                             periodicJobBehavior = self.agent.PeriodicPriceCheck(period=CronExpression.EVERY_10_MINUTES.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
@@ -44,8 +49,8 @@ class CryptoPriceAgent(Agent):
             print(f"{AGENT_NAME} Running periodic crypto price...")
             try:
                 loop = asyncio.get_event_loop()
-                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
-                # print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifiying CryptoOrchestrator...")
+                numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
+                print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
 
                 payload = {
                     "databaseCollectionName": "crypto-price" 
