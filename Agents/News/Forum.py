@@ -14,7 +14,7 @@ class ForumAgent(Agent):
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.forumScraper = Forum(SHOW_LOGS=True)
+        self.forumScraper = Forum(SHOW_LOGS=False)
         self.isJobRunning = False
             
 
