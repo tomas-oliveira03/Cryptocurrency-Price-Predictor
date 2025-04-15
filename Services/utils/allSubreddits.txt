@@ -4,3 +4,6 @@ CryptoMarkets
 CryptoCurrencies
 CryptoMarkets
 Bitcoin
+ethereum
+solana
+dogecoin

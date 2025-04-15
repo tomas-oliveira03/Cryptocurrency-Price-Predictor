@@ -46,12 +46,16 @@ class RedditScraper:
         return headers
         
         
-    def getSubredditPosts(self, subreddit, sort, limit, after):
+    def getSubredditPosts(self, subreddit, sort, limit, after, timeframe):
         params = {'limit': limit}
         if after:
             params['after'] = after
             
         url = f"https://oauth.reddit.com/r/{subreddit}/{sort}"
+        
+        if(sort == "top"):
+            params['t'] = timeframe
+        
         res = requests.get(url, headers=self.headers, params=params)
         
         if res.status_code != 200:
@@ -60,7 +64,7 @@ class RedditScraper:
         return res.json()['data']
 
 
-    def processSubredditData(self, subreddit, sort="hot", pages=25, limit=100, after=None):            
+    def processSubredditData(self, subreddit, sort="hot", pages=25, limit=100, after=None, timeframe=None):            
         
         for page in range(pages):
             addedPosts = 0
@@ -71,7 +75,7 @@ class RedditScraper:
                 params['after'] = after
             
             try:
-                data = self.getSubredditPosts(subreddit, sort, limit, after)
+                data = self.getSubredditPosts(subreddit, sort, limit, after, timeframe)
                 
             except Exception as e:
                 if self.SHOW_LOGS: print(e)
@@ -126,7 +130,7 @@ class RedditScraper:
 
                 self.mongoCollection.insert_one(post_document)
 
-            if self.SHOW_LOGS: print(f"Page {page+1} done. Inserted {addedPosts} posts, updated {updatedPosts} posts.")
+            if self.SHOW_LOGS: print(f"Page {page+1} done. Inserted {addedPosts} posts, updated {updatedPosts} posts. [SUBREDDIT: {subreddit}] [SORT: {sort}] [TIMEFRAME: {timeframe}]")
             
             if not after:
                 break
@@ -134,9 +138,9 @@ class RedditScraper:
         
     def processAllSubreddits(self):
         for subreddit in self.allSubreddits:
-            
-            if self.SHOW_LOGS: print("Scraping subreddit: ", subreddit)
             self.processSubredditData(subreddit=subreddit, sort="new")
+            self.processSubredditData(subreddit=subreddit, sort="top", timeframe="week")
+            self.processSubredditData(subreddit=subreddit, sort="top", timeframe="month")
             if self.SHOW_LOGS: print("=====\n\n")
         
         
