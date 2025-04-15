@@ -42,7 +42,6 @@ class SentimentAnalysisAgent(Agent):
             # Waits until there is something in the queue
             payload = await self.agent.queue.get() 
             try:
-                await asyncio.sleep(5)
                 databaseCollectionName = payload.getDatabaseCollectionName()
                 providerAgentName = payload.getProviderAgentName()
 
