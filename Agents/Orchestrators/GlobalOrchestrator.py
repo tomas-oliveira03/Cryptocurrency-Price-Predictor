@@ -1,5 +1,5 @@
-import json
 import os
+import jsonpickle
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from Agents.utils.messageHandler import sendMessage
@@ -34,8 +34,8 @@ class GlobalOrchestratorAgent(Agent):
                 performativeReceived = msg.get_metadata("performative")
                 match performativeReceived:
                     case "new_data_available":
-                        payload = json.loads(msg.body)
-                        print(f"{AGENT_NAME} New data available to send to prediction model. {payload}")
+                        payload = jsonpickle.decode(msg.body)
+                        print(f"{AGENT_NAME} New data available to send to prediction model. {payload.toString()}")
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")

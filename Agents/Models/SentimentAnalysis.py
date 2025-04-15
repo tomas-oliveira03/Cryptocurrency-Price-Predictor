@@ -1,5 +1,5 @@
-import json
 import os
+import jsonpickle
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from Services.Models.SentimentAnalysis import SentimentAnalysis
@@ -14,6 +14,7 @@ class SentimentAnalysisAgent(Agent):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
         self.sentimentAnalysis = SentimentAnalysis(SHOW_LOGS=False)
+        self.providerAgentName = "SentimentAnalysis"
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -26,12 +27,13 @@ class SentimentAnalysisAgent(Agent):
                         print(f"{AGENT_NAME} Ready to receive information...")
                         
                     case "new_data_to_analyze":
-                        payload = json.loads(msg.body)
-                        databaseCollectionName = payload.get("databaseCollectionName")
-                        providerAgentName = payload.get("providerAgentName")
+                        payload = jsonpickle.decode(msg.body)
+                        databaseCollectionName = payload.getDatabaseCollectionName()
+                        providerAgentName = payload.getProviderAgentName()
                         
+                        print(databaseCollectionName, providerAgentName)
                         if not databaseCollectionName or not providerAgentName:
-                            print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Payload arguments missing.")
+                            print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Invalid payload arguments.")
                             return
                         
                         # Analyze data                        
@@ -39,7 +41,9 @@ class SentimentAnalysisAgent(Agent):
                         try:
                             # self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
                             
-                            payload["providerAgentName"] = "SentimentAnalysis"
+                            payload.setProviderAgentName(self.agent.providerAgentName)
+                            
+                            print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
                             await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
 
                         except Exception as e:

@@ -22,7 +22,7 @@ class InformJobEnded:
         
     
     def toString(self):
-        return "InformJobEnded: " + json.dumps({
+        return json.dumps({
             "databaseCollectionName": self.databaseCollectionName,
             "providerAgentName": self.providerAgentName
         })

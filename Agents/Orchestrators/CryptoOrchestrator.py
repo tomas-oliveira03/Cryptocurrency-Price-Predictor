@@ -1,5 +1,5 @@
-import json
 import os
+import jsonpickle
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour, CyclicBehaviour
 from Agents.utils.messageHandler import sendMessage
@@ -12,6 +12,7 @@ class CryptoOrchestratorAgent(Agent):
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
+        self.providerAgentName = "CryptoOrchestrator"
             
             
     class NotifyCryptoSpecialists(OneShotBehaviour):
@@ -36,8 +37,15 @@ class CryptoOrchestratorAgent(Agent):
                         self.agent.add_behaviour(self.agent.NotifyCryptoSpecialists())
                         
                     case "job_finished":
-                        payload = json.loads(msg.body)
-                        payload["providerAgentName"] = "CryptoOrchestrator"
+                        payload = jsonpickle.decode(msg.body)
+                        databaseCollectionName = payload.getDatabaseCollectionName()
+                        
+                        if not databaseCollectionName:
+                            print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Invalid payload arguments.")
+                            return
+                        
+                        payload.setProviderAgentName(self.agent.providerAgentName)
+                        
                         print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
                         await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
 
