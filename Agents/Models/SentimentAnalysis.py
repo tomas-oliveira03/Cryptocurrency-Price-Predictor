@@ -1,3 +1,4 @@
+import asyncio
 import os
 import jsonpickle
 from spade.agent import Agent
@@ -15,6 +16,7 @@ class SentimentAnalysisAgent(Agent):
         self.spadeDomain = spadeDomain
         self.sentimentAnalysis = SentimentAnalysis(SHOW_LOGS=False)
         self.providerAgentName = "SentimentAnalysis"
+        self.queue = asyncio.Queue()
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -28,35 +30,43 @@ class SentimentAnalysisAgent(Agent):
                         
                     case "new_data_to_analyze":
                         payload = jsonpickle.decode(msg.body)
-                        databaseCollectionName = payload.getDatabaseCollectionName()
-                        providerAgentName = payload.getProviderAgentName()
-                        
-                        print(databaseCollectionName, providerAgentName)
-                        if not databaseCollectionName or not providerAgentName:
-                            print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Invalid payload arguments.")
-                            return
-                        
-                        # Analyze data                        
-                        print(f"{AGENT_NAME} Analyzing new data for {databaseCollectionName}...")
-                        try:
-                            # self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
-                            
-                            payload.setProviderAgentName(self.agent.providerAgentName)
-                            
-                            print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
-                            await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
-
-                        except Exception as e:
-                            print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
-                            return
+                        await self.agent.queue.put(payload)  
+                        print(f"{AGENT_NAME} Payload enqueued...")
                         
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")
         
+        
+    class ProcessingQueueBehav(CyclicBehaviour):
+        async def run(self):
+            # Waits until there is something in the queue
+            payload = await self.agent.queue.get() 
+            try:
+                await asyncio.sleep(5)
+                databaseCollectionName = payload.getDatabaseCollectionName()
+                providerAgentName = payload.getProviderAgentName()
 
+                if not databaseCollectionName or not providerAgentName:
+                    print(f"{AGENT_NAME} \033[91mERROR\033[0m Invalid payload arguments.")
+                    return
+
+                print(f"{AGENT_NAME} Analyzing new data for {databaseCollectionName}...")
+                # self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
+
+                payload.setProviderAgentName(self.agent.providerAgentName)
+
+                print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
+                await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+
+            except Exception as e:
+                print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
+                
+            finally:
+                self.agent.queue.task_done()
 
 
     async def setup(self):
         print(f"{AGENT_NAME} Starting...")
         self.add_behaviour(self.ReceiveRequestBehav())
+        self.add_behaviour(self.ProcessingQueueBehav())
         

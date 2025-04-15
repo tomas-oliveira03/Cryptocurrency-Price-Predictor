@@ -26,7 +26,7 @@ async def main():
     if not SPADE_DOMAIN or not SPADE_PASSWORD:
         raise ValueError("Please set the SPADE_DOMAIN and SPADE_PASSWORD environment variables first.")
     
-    # Start agents
+    # Create agents
     globalOrchestratorAgent = GlobalOrchestratorAgent(f"globalOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     cryptoOrchestratorAgent = CryptoOrchestratorAgent(f"cryptoOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     newsOrchestratorAgent = NewsOrchestratorAgent(f"newsOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
@@ -42,6 +42,7 @@ async def main():
     forumAgent = ForumAgent(f"forumPosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
     
+    # Start agents
     await sentimentAnalysisAgent.start(auto_register=True)
     
     await redditAgent.start(auto_register=True)
@@ -56,9 +57,9 @@ async def main():
     await cryptoOrchestratorAgent.start(auto_register=True)
     await globalOrchestratorAgent.start(auto_register=True)
     
+    
+    # Wait forever 
     await spade.wait_until_finished(globalOrchestratorAgent)
-    await spade.wait_until_finished(cryptoOrchestratorAgent)
-    await spade.wait_until_finished(newsOrchestratorAgent)
 
 
 def signal_handler(sig, frame):
