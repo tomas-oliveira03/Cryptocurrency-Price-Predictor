@@ -13,6 +13,17 @@ class DataAnalysisOrchestratorAgent(Agent):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
         self.providerAgentName = "DataAnalysisOrchestrator"
+        
+        self.allAgentsNeededForTaskCompletionMap = {
+            "reddit": {
+                "SentimentAnalysis": False,
+                "CoinIdentifier": False
+            },
+            "articles": {
+                "SentimentAnalysis": False,
+                "CoinIdentifier": False
+            }
+        }
             
             
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -35,6 +46,13 @@ class DataAnalysisOrchestratorAgent(Agent):
                         
                         payload.setProviderAgentName(self.agent.providerAgentName)
                         
+                        # Initialize tracking if not already present
+                        if databaseCollectionName not in self.agent.allAgentsNeededForTaskCompletionMap:
+                            self.agent.allAgentsNeededForTaskCompletionMap[databaseCollectionName] = {
+                                "SentimentAnalysis": False,
+                                "CoinIdentifier": False
+                            }
+                        
                         print(f"{AGENT_NAME} Redirecting message to Sentiment Analysis Agent...")
                         await sendMessage(self, "sentimentAnalysis", "data_analysis_request", payload)
                         
@@ -43,10 +61,26 @@ class DataAnalysisOrchestratorAgent(Agent):
                         
                     case "data_analysis_finished":
                         payload = jsonpickle.decode(msg.body)
-                        payload.setProviderAgentName(self.agent.providerAgentName)
                         
-                        print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
-                        await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+                        databaseCollectionName = payload.getDatabaseCollectionName()
+                        providerAgentName = payload.getProviderAgentName()
+                        
+                        # Mark agent as completed
+                        self.agent.allAgentsNeededForTaskCompletionMap[databaseCollectionName][providerAgentName] = True
+                        
+                        payload.setProviderAgentName(self.agent.providerAgentName)
+                        print(f"{AGENT_NAME} Received result from {providerAgentName} for {databaseCollectionName}")
+                        
+                        allDone = all(self.agent.allAgentsNeededForTaskCompletionMap[databaseCollectionName].values())
+                        
+                        if allDone:
+                            print(f"{AGENT_NAME} All analysis complete for {databaseCollectionName}. Forwarding to Global Orchestrator...")
+                            payload.setProviderAgentName(self.agent.providerAgentName)
+                            await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+
+                            # Reset all agent flags to False (instead of deleting)
+                            for agentName in self.agent.allAgentsNeededForTaskCompletionMap[databaseCollectionName]:
+                                self.agent.allAgentsNeededForTaskCompletionMap[databaseCollectionName][agentName] = False
 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")

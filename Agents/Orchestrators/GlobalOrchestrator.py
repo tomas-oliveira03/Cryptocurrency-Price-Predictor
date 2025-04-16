@@ -42,7 +42,6 @@ class GlobalOrchestratorAgent(Agent):
                             print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Invalid payload arguments.")
                             return
                         
-                        
                         print(f"{AGENT_NAME} New data available to send to prediction model. {payload.toString()}")
                 
                     case _:
