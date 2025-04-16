@@ -35,11 +35,11 @@ def getCryptoPriceData(self, cryptoSymbol=None, startDate=None, endDate=None):
 
 def getRedditData(self, subreddit=None, startDate=None, endDate=None):
     query = {}
-    
+
     # Add subreddit filter if provided
     if subreddit:
         query["subreddit"] = subreddit
-    
+
     # Add date filters if provided
     if startDate or endDate:
         query["created_at"] = {}
@@ -47,9 +47,16 @@ def getRedditData(self, subreddit=None, startDate=None, endDate=None):
             query["created_at"]["$gte"] = startDate
         if endDate:
             query["created_at"]["$lte"] = endDate
-    
-    # Execute query and return results
-    results = list(self.redditDB.find(query).sort("created_at", -1))
+
+    # Define fields to return
+    projection = {
+        "_id": 0,
+        "created_at": 1,
+        "sentiment": 1
+    }
+
+    # Execute query with projection and return sorted results
+    results = list(self.redditDB.find(query, projection).sort("created_at", -1))
     return results
 
 
@@ -67,8 +74,18 @@ def getForumData(self, cryptoSymbol=None, startDate=None, endDate=None):
             query["created_at"]["$gte"] = startDate
         if endDate:
             query["created_at"]["$lte"] = endDate
-    
-    # Execute query and return results
-    results = list(self.forumDB.find(query).sort("created_at", -1))
+
+    # Define fields to return
+    projection = {
+        "_id": 0,
+        "created_at": 1,
+        "currencies": 1,
+        "source": 1,
+        "votes": 1,
+        "sentiment": 1
+    }
+
+    # Execute query with projection and return sorted results
+    results = list(self.forumDB.find(query, projection).sort("created_at", -1))
     return results
 
