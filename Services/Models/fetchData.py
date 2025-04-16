@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+
 def getFearGreedData(self, startDate=None, endDate=None):
     query = {}
     
@@ -137,3 +140,30 @@ def getArticlesData(self, startDate=None, endDate=None, cryptoSymbol=None):
     return results
 
 
+
+
+
+
+def getDataForPrediction(self, cryptoCoin):       
+
+    startDate = datetime.now() - timedelta(days=30)
+    endDate = datetime.now() - timedelta(days=5)
+    
+    # Get data from all sources
+    cryptoData = getCryptoPriceData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+    fearGreedData = getFearGreedData(self, startDate=startDate)
+    
+    # Get social media data related to this cryptocurrency
+    redditData = getRedditData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+    forumData = getForumData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+    articlesData = getArticlesData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+
+    datasets = {
+        "price_data": cryptoData,
+        "fear_greed_data": fearGreedData,
+        "reddit_data": redditData,
+        "forum_data": forumData,
+        "articles": articlesData
+    }
+
+    return datasets
