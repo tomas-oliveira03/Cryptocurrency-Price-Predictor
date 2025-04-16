@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler  # Use MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -56,10 +56,13 @@ def train_model(features_df, target_column='close', forecast_days=5, test_size=0
         X, y, test_size=test_size, shuffle=False  # No shuffle for time series
     )
     
-    # Standardize features
-    scaler = StandardScaler()
+    # Use MinMaxScaler instead of StandardScaler
+    scaler = MinMaxScaler(feature_range=(0, 1))
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
+    
+    # Store feature names in the scaler for later use
+    scaler.feature_names = X.columns.tolist()
     
     # Store results dictionary
     all_results = {}
@@ -177,7 +180,7 @@ def make_future_predictions(model, scaler, features, latest_data, days=5):
     
     Args:
         model: Trained model
-        scaler: Fitted scaler
+        scaler: Fitted scaler (MinMaxScaler expected)
         features: List of feature names
         latest_data: DataFrame with the most recent data
         days: Number of days to predict
@@ -205,9 +208,18 @@ def make_future_predictions(model, scaler, features, latest_data, days=5):
         # Get the features we need for prediction (most recent data point)
         current_row = future_data.iloc[-1:].copy()
         
-        # Scale the features
-        current_features = current_row[features].values
-        scaled_features = scaler.transform(current_features)
+        # Scale the features - create a DataFrame with proper column names
+        if hasattr(scaler, 'feature_names'):
+            # Use the saved feature names if available
+            feature_df = pd.DataFrame(
+                current_row[features].values,
+                columns=scaler.feature_names
+            )
+            scaled_features = scaler.transform(feature_df)
+        else:
+            # Fallback to standard approach
+            current_features = current_row[features].values
+            scaled_features = scaler.transform(current_features)
         
         # Make prediction
         pred = model.predict(scaled_features)[0]
@@ -216,12 +228,28 @@ def make_future_predictions(model, scaler, features, latest_data, days=5):
         # Create a new row for the next day
         new_row = current_row.copy()
         
-        # Update price-related features with prediction
+        # Update price-related features with prediction - Remove random noise
         new_row['close'] = pred
-        new_row['open'] = pred * (1 + np.random.normal(0, 0.01))  # Add slight randomness
-        new_row['high'] = pred * (1 + abs(np.random.normal(0, 0.015)))  # Slightly higher
-        new_row['low'] = pred * (1 - abs(np.random.normal(0, 0.01)))  # Slightly lower
+        # Estimate open/high/low based on predicted close and previous day's range
+        prev_close = future_data.iloc[-1]['close']
         
+        # Simple estimation: open near previous close, high/low based on predicted change
+        # Ensure we use scalar values for comparison
+        new_row['open'] = prev_close * 1.001 if pred > prev_close else prev_close * 0.999
+        open_val = new_row['open'].iloc[0] if isinstance(new_row['open'], pd.Series) else new_row['open']
+        
+        new_row['high'] = max(pred, open_val) * 1.01 # Estimate high slightly above open/close
+        new_row['low'] = min(pred, open_val) * 0.99   # Estimate low slightly below open/close
+        
+        # Ensure high >= open/close and low <= open/close
+        # Extract scalar values before comparison
+        high_val = new_row['high'].iloc[0] if isinstance(new_row['high'], pd.Series) else new_row['high']
+        low_val = new_row['low'].iloc[0] if isinstance(new_row['low'], pd.Series) else new_row['low']
+        close_val = new_row['close'].iloc[0] if isinstance(new_row['close'], pd.Series) else new_row['close']
+        
+        new_row['high'] = max(high_val, close_val, open_val)
+        new_row['low'] = min(low_val, close_val, open_val)
+
         # Update moving averages properly
         if 'ma5' in features:
             recent_closes = list(future_data.tail(4)['close'].values) + [pred]
@@ -261,23 +289,30 @@ def make_future_predictions(model, scaler, features, latest_data, days=5):
         if 'volatility_ratio' in features and len(future_data) >= 4:
             recent_closes = list(future_data.tail(4)['close'].values) + [pred]
             volatility = np.std(recent_closes)
-            new_row['volatility_ratio'] = volatility / pred
+            new_row['volatility_ratio'] = volatility / pred if pred != 0 else 0 # Avoid division by zero
             
         # Update MA crossovers
         if 'ma_crossover' in features and 'ma5' in new_row and 'ma14' in new_row:
-            new_row['ma_crossover'] = int(new_row['ma5'] > new_row['ma14'])
+            ma5_val = new_row['ma5'].iloc[0] if isinstance(new_row['ma5'], pd.Series) else new_row['ma5']
+            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
+            new_row['ma_crossover'] = int(ma5_val > ma14_val)
             
         # Update Bollinger Bands
         if 'bb_upper' in features and 'ma14' in new_row:
             std_20 = np.std(list(future_data.tail(19)['close'].values) + [pred])
-            new_row['bb_upper'] = new_row['ma14'] + (std_20 * 2)
+            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
+            new_row['bb_upper'] = ma14_val + (std_20 * 2)
             
         if 'bb_lower' in features and 'ma14' in new_row:
             std_20 = np.std(list(future_data.tail(19)['close'].values) + [pred])
-            new_row['bb_lower'] = new_row['ma14'] - (std_20 * 2)
+            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
+            new_row['bb_lower'] = ma14_val - (std_20 * 2)
             
         if 'bb_width' in features and 'bb_upper' in new_row and 'bb_lower' in new_row and 'ma14' in new_row:
-            new_row['bb_width'] = (new_row['bb_upper'] - new_row['bb_lower']) / new_row['ma14']
+            bb_upper_val = new_row['bb_upper'].iloc[0] if isinstance(new_row['bb_upper'], pd.Series) else new_row['bb_upper']
+            bb_lower_val = new_row['bb_lower'].iloc[0] if isinstance(new_row['bb_lower'], pd.Series) else new_row['bb_lower']
+            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
+            new_row['bb_width'] = (bb_upper_val - bb_lower_val) / ma14_val if ma14_val != 0 else 0 # Avoid division by zero
             
         # Update RSI if present
         if 'rsi' in features and len(future_data) >= 14:
@@ -324,8 +359,8 @@ def visualize_predictions(historical_data, predictions, save_path="price_predict
     Visualize historical data and predictions
     
     Args:
-        historical_data: DataFrame with historical data
-        predictions: DataFrame with predictions
+        historical_data: DataFrame with historical data (needs at least 'close' column)
+        predictions: DataFrame with predictions (needs 'predicted_price' column)
         save_path: Path to save the visualization
     """
     # Get the last 30 days of historical data for better visualization
@@ -351,16 +386,17 @@ def visualize_predictions(historical_data, predictions, save_path="price_predict
     plt.scatter(predictions.index, predictions['predicted_price'], color='red', s=30)
     
     # Add a vertical line at the last historical data point
-    plt.axvline(x=historical_data.index[-1], color='gray', linestyle=':', linewidth=1)
+    last_hist_date = historical_data.index[-1]
+    last_hist_price = historical_data['close'].iloc[-1]
+    plt.axvline(x=last_hist_date, color='gray', linestyle=':', linewidth=1)
     
-    # Calculate price change percentage
-    first_pred = predictions['predicted_price'].iloc[0]
-    last_pred = predictions['predicted_price'].iloc[-1]
-    change_pct = (last_pred - first_pred) / first_pred * 100
-    direction = "increase" if change_pct > 0 else "decrease"
+    # Calculate price change percentage from the last historical price to the last predicted price
+    last_pred_price = predictions['predicted_price'].iloc[-1]
+    change_pct = ((last_pred_price - last_hist_price) / last_hist_price) * 100
+    direction = "increase" if change_pct >= 0 else "decrease"
     
-    # Add labels and title
-    plt.title(f'Price Prediction: {abs(change_pct):.2f}% {direction} over next {len(predictions)} days', 
+    # Add labels and title using the new calculation
+    plt.title(f'Price Prediction: {abs(change_pct):.2f}% {direction} from last known price over next {len(predictions)} days', 
               fontsize=14, fontweight='bold')
     plt.xlabel('Date', fontsize=12)
     plt.ylabel('Price ($)', fontsize=12)
@@ -399,11 +435,16 @@ def backtest_model(model, scaler, features, data, lookback_days=30, prediction_d
         print("Not enough data for backtesting")
         return None
     
+    # Add feature names to scaler if not present
+    if not hasattr(scaler, 'feature_names'):
+        scaler.feature_names = features
+    
     # Determine backtest points (every 10 days)
     backtest_points = list(range(lookback_days, len(data) - prediction_days, 10))
     
     results = []
     
+    # Fix: iterate directly through backtest_points instead of using range()
     for i in backtest_points:
         # Get historical data up to this point
         historical = data.iloc[:i].copy()
@@ -442,6 +483,19 @@ def backtest_model(model, scaler, features, data, lookback_days=30, prediction_d
     
     # Create results DataFrame
     results_df = pd.DataFrame(results)
+    
+    # Check if we have results before calculating metrics
+    if len(results_df) == 0:
+        print("No valid backtest results generated")
+        return {
+            'results': pd.DataFrame(),
+            'metrics': {
+                'mse': float('nan'),
+                'rmse': float('nan'),
+                'mae': float('nan'),
+                'mape': float('nan')
+            }
+        }
     
     # Calculate aggregate metrics
     mse = mean_squared_error(results_df['actual_price'], results_df['predicted_price'])

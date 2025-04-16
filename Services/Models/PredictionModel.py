@@ -141,7 +141,9 @@ class PredictionModel:
                 day_change_pct = ((row['predicted_price'] - last_price) / last_price) * 100
                 print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f} ({day_change_pct:+.2f}% from last known price)")
             else:
-                prev_price = future_predictions['predicted_price'][future_predictions.index.get_loc(date) - 1]
+                # Use iloc instead of direct position-based indexing
+                idx = future_predictions.index.get_loc(date) - 1
+                prev_price = future_predictions['predicted_price'].iloc[idx]
                 day_change_pct = ((row['predicted_price'] - prev_price) / prev_price) * 100
                 print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f} ({day_change_pct:+.2f}% daily change)")
         
