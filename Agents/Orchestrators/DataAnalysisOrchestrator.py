@@ -15,15 +15,6 @@ class DataAnalysisOrchestratorAgent(Agent):
         self.providerAgentName = "DataAnalysisOrchestrator"
             
             
-    class NotifyNewsSpecialists(OneShotBehaviour):
-        async def run(self):
-            print(f"{AGENT_NAME} Notifying Sentiment Analysis Agent to start...")
-            await sendMessage(self, "redditPosts", "sentimentAnalysis")
-            
-            print(f"{AGENT_NAME} Notifying Coin Extractor Agent to start...") 
-            # await sendMessage(self, "articlePosts", "start_agent")
-            
-            
     class ReceiveRequestBehav(CyclicBehaviour):
         async def run(self):
             msg = await self.receive(timeout=20)
@@ -31,7 +22,7 @@ class DataAnalysisOrchestratorAgent(Agent):
                 performativeReceived = msg.get_metadata("performative")
                 match performativeReceived:
                     case "start_agent":
-                        self.agent.add_behaviour(self.agent.NotifyNewsSpecialists())
+                        print(f"{AGENT_NAME} Ready to deal with data analysis information...")
                         
                     case "new_data_to_analyze":
                         payload = jsonpickle.decode(msg.body)
@@ -46,6 +37,9 @@ class DataAnalysisOrchestratorAgent(Agent):
                         
                         print(f"{AGENT_NAME} Redirecting message to Sentiment Analysis Agent...")
                         await sendMessage(self, "sentimentAnalysis", "data_analysis_request", payload)
+                        
+                        print(f"{AGENT_NAME} Redirecting message to Coin Identifier Agent...")
+                        await sendMessage(self, "coinIdentifier", "data_analysis_request", payload)
                         
                     case "data_analysis_finished":
                         payload = jsonpickle.decode(msg.body)

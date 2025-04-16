@@ -3,19 +3,19 @@ import os
 import jsonpickle
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
-from Services.DataAnalysis.SentimentAnalysis import SentimentAnalysis
+from Services.DataAnalysis.CoinIndentifier import CoinIdentifier
 from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[32m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;2;75;0;130m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class SentimentAnalysisAgent(Agent):
+class CoinIdentifierAgent(Agent):
     
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.sentimentAnalysis = SentimentAnalysis(SHOW_LOGS=False)
-        self.providerAgentName = "SentimentAnalysis"
+        self.coinIdentifier = CoinIdentifier(SHOW_LOGS=False)
+        self.providerAgentName = "CoinIdentifier"
         self.queue = asyncio.Queue()
             
 
@@ -47,7 +47,7 @@ class SentimentAnalysisAgent(Agent):
                     return
 
                 print(f"{AGENT_NAME} Analyzing new data for {databaseCollectionName}...")
-                # self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
+                self.agent.coinIdentifier.idetifyCoinsForAllCollections(databaseCollectionName)
 
                 payload.setProviderAgentName(self.agent.providerAgentName)
 

@@ -4,7 +4,6 @@ import sys
 from bson import CodecOptions
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
-from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -34,7 +33,8 @@ class CoinIdentifier:
     def idetifyCoinsForAllCollections(self, collectionName):
         collection = self.allMongoCollectionsDict.get(collectionName)
         if collection is None:
-            raise ValueError(f"Invalid collection name: {collectionName}")
+            if self.SHOW_LOGS: print(f"Collection: {collectionName}, does not need coin identifier, it already has it by default...")
+            return
     
         if self.SHOW_LOGS: print("Coin identifier for collection:", collectionName)
         self.identifyCoinsForCollection(collection, collectionName)
