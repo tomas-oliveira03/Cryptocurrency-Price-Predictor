@@ -14,8 +14,7 @@ from Agents.News.Reddit import RedditAgent
 from Agents.Orchestrators.GlobalOrchestrator import GlobalOrchestratorAgent
 from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
 from Agents.Orchestrators.NewsOrchestrator import NewsOrchestratorAgent
-from Agents.Models.SentimentAnalysis import SentimentAnalysisAgent
-
+from Agents.DataAnalysis.SentimentAnalysis import SentimentAnalysisAgent
 
 async def main():
     # Your Spade agent startup code

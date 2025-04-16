@@ -3,7 +3,7 @@ import os
 import jsonpickle
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
-from Services.Models.SentimentAnalysis import SentimentAnalysis
+from Services.DataAnalysis.SentimentAnalysis import SentimentAnalysis
 from Agents.utils.messageHandler import sendMessage
 
 # FOR DEBUGGING ONLY

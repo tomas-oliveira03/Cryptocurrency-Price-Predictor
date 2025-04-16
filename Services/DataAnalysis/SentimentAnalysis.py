@@ -3,7 +3,6 @@ from bson import CodecOptions
 from dotenv import load_dotenv
 from pymongo import MongoClient, UpdateOne
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
-import pandas as pd
 
 class SentimentAnalysis:
     def __init__(self, SHOW_LOGS=True):
