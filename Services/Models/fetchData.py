@@ -144,9 +144,9 @@ def getArticlesData(self, startDate=None, endDate=None, cryptoSymbol=None):
 
 
 
-def getDataForPrediction(self, cryptoCoin):       
+def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):       
 
-    startDate = datetime.now() - timedelta(days=30)
+    startDate = datetime.now() - timedelta(days=numberOfPastDaysOfData)
     endDate = datetime.now() - timedelta(days=5)
     
     # Get data from all sources
@@ -163,7 +163,7 @@ def getDataForPrediction(self, cryptoCoin):
         "fear_greed_data": fearGreedData,
         "reddit_data": redditData,
         "forum_data": forumData,
-        "articles": articlesData
+        "articles_data": articlesData
     }
 
     return datasets

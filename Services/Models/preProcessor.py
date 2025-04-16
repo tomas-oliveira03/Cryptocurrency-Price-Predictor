@@ -48,8 +48,8 @@ def preprocessData(self, rawData):
         all_sentiment_data.append(forumDF)
     
     # Process Articles data (if available)
-    if "articles" in rawData and rawData["articles"]:
-        articlesDF = pd.DataFrame(rawData["articles"])
+    if rawData["articles_data"]:
+        articlesDF = pd.DataFrame(rawData["articles_data"])
         # Add source identifier
         articlesDF['source'] = 'articles'
         # date field already named correctly

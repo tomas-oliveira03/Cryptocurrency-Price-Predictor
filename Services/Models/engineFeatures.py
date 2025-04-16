@@ -130,8 +130,8 @@ def engineFeatures(self, processedData):
         if 'sentiment_count' in featuresDF.columns:
             featuresDF['sentiment_count'] = featuresDF['sentiment_count'].fillna(0)
     
-    # Forward fill any remaining NaN values
-    featuresDF = featuresDF.fillna(method='ffill')
+    # Forward fill any remaining NaN values - UPDATED to use ffill() instead of fillna(method='ffill')
+    featuresDF = featuresDF.ffill()
     
     # Drop NaN values that may have been introduced at the beginning by rolling operations
     featuresDF = featuresDF.dropna()
