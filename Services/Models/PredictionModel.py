@@ -23,31 +23,32 @@ class PredictionModel:
         
         self.redditDB = mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True))
         self.forumDB = mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
+        self.articlesDB = mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
         
 
-    def getDataForPrediction(self):       
-        cryptoSymbol="BTC"
-        cryptoSymbolReddit="Bitcoin"
-        
+    def getDataForPrediction(self, cryptoCoin):       
+
         startDate = datetime.now() - timedelta(days=30)
         endDate = datetime.now() - timedelta(days=5)
         
         # Get data from all sources
-        cryptoData = fetchData.getCryptoPriceData(self, cryptoSymbol=cryptoSymbol, startDate=startDate)
+        cryptoData = fetchData.getCryptoPriceData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
         fearGreedData = fetchData.getFearGreedData(self, startDate=startDate)
         
         # Get social media data related to this cryptocurrency
-        redditData = fetchData.getRedditData(self, startDate=startDate, subreddit=cryptoSymbolReddit)
-        forumData = fetchData.getForumData(self, cryptoSymbol=cryptoSymbol, startDate=startDate)
+        redditData = fetchData.getRedditData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+        forumData = fetchData.getForumData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+        articlesData = fetchData.getArticlesData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
 
-        # Return all data in a dictionary
-        return {
+        datasets = {
             "price_data": cryptoData,
             "fear_greed_data": fearGreedData,
-            "reddit_data":  redditData,
-            "forum_data":  forumData
+            "reddit_data": redditData,
+            "forum_data": forumData,
+            "articles": articlesData
         }
-    
+
+        return datasets
     
     def preprocessData(self, rawData):
         """
@@ -128,52 +129,52 @@ if __name__ == "__main__":
     
     # Get raw data for prediction
     print("Fetching data...")
-    rawData = predictionModel.getDataForPrediction()
+    rawData = predictionModel.getDataForPrediction(cryptoCoin="BTC")
     
-    # Preprocess the data
-    print("Preprocessing data...")
-    processedData = predictionModel.preprocessData(rawData)
+    # # Preprocess the data
+    # print("Preprocessing data...")
+    # processedData = predictionModel.preprocessData(rawData)
     
-    # Save each DataFrame to a CSV file
-    print("\nSaving data to CSV files...")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    csv_dir = "data_exports"
+    # # Save each DataFrame to a CSV file
+    # print("\nSaving data to CSV files...")
+    # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # csv_dir = "data_exports"
     
-    # Create the directory if it doesn't exist
-    if not os.path.exists(csv_dir):
-        os.makedirs(csv_dir)
+    # # Create the directory if it doesn't exist
+    # if not os.path.exists(csv_dir):
+    #     os.makedirs(csv_dir)
     
-    # Export each DataFrame to a CSV file
-    for name, df in processedData.items():
-        if not df.empty:
-            csv_filename = f"{csv_dir}/{name}_{timestamp}.csv"
-            df.to_csv(csv_filename)
-            print(f"  Saved {name} to {csv_filename}")
-        else:
-            print(f"  {name} is empty, no CSV file created")
+    # # Export each DataFrame to a CSV file
+    # for name, df in processedData.items():
+    #     if not df.empty:
+    #         csv_filename = f"{csv_dir}/{name}_{timestamp}.csv"
+    #         df.to_csv(csv_filename)
+    #         print(f"  Saved {name} to {csv_filename}")
+    #     else:
+    #         print(f"  {name} is empty, no CSV file created")
     
-    # Print table with first 5 rows of each dataset
-    print("\n" + "="*80)
-    print("FIRST 5 ROWS OF EACH DATASET")
-    print("="*80)
+    # # Print table with first 5 rows of each dataset
+    # print("\n" + "="*80)
+    # print("FIRST 5 ROWS OF EACH DATASET")
+    # print("="*80)
     
-    for name, df in processedData.items():
-        if not df.empty:
-            print(f"\n{name.upper()} - First 5 rows:")
-            print("-"*80)
-            print(df.head(5))
-            print("-"*80)
-        else:
-            print(f"\n{name.upper()}: Empty DataFrame")
+    # for name, df in processedData.items():
+    #     if not df.empty:
+    #         print(f"\n{name.upper()} - First 5 rows:")
+    #         print("-"*80)
+    #         print(df.head(5))
+    #         print("-"*80)
+    #     else:
+    #         print(f"\n{name.upper()}: Empty DataFrame")
     
-    # Print general information about the processed data
-    print("\nProcessed Data Information:")
-    for name, df in processedData.items():
-        if not df.empty:
-            print(f"\n{name}:")
-            print(f"  Shape: {df.shape}")
-            print(f"  Columns: {df.columns.tolist()}")
-        else:
-            print(f"\n{name}: Empty DataFrame")
+    # # Print general information about the processed data
+    # print("\nProcessed Data Information:")
+    # for name, df in processedData.items():
+    #     if not df.empty:
+    #         print(f"\n{name}:")
+    #         print(f"  Shape: {df.shape}")
+    #         print(f"  Columns: {df.columns.tolist()}")
+    #     else:
+    #         print(f"\n{name}: Empty DataFrame")
     
-    print("\nPreprocessing complete!")
+    # print("\nPreprocessing complete!")

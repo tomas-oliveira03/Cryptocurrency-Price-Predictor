@@ -9,12 +9,20 @@ def getFearGreedData(self, startDate=None, endDate=None):
         if endDate:
             query["date"]["$lte"] = endDate
     
-    # Execute query and return results
-    results = list(self.cryptoFearGreedDB.find(query).sort("date", -1))
+    # Define fields to return
+    projection = {
+        "_id": 0, 
+        "date": 1,
+        "classification": 1,
+        "value": 1
+    }
+    
+    # Execute query with projection and return results
+    results = list(self.cryptoFearGreedDB.find(query, projection).sort("date", -1))
     return results
 
 
-def getCryptoPriceData(self, cryptoSymbol=None, startDate=None, endDate=None):
+def getCryptoPriceData(self, startDate=None, endDate=None, cryptoSymbol=None):
     query = {}
     
     if cryptoSymbol:
@@ -28,17 +36,32 @@ def getCryptoPriceData(self, cryptoSymbol=None, startDate=None, endDate=None):
         if endDate:
             query["date"]["$lte"] = endDate
     
+    # Define fields to return
+    projection = {
+        "_id": 0, 
+        "date": 1,
+        "averagePrice": 1,
+        "close": 1,
+        "high": 1,
+        "low": 1,
+        "open": 1,
+        "volumefrom": 1,
+        "volumeto": 1
+    }
+    
     # Execute query and return results
-    results = list(self.detailedCryptoData.find(query).sort("date", -1))
+    results = list(self.detailedCryptoData.find(query, projection).sort("date", -1))
     return results
 
 
-def getRedditData(self, subreddit=None, startDate=None, endDate=None):
+
+
+def getRedditData(self, startDate=None, endDate=None, cryptoSymbol=None):
     query = {}
 
-    # Add subreddit filter if provided
-    if subreddit:
-        query["subreddit"] = subreddit
+    # Add cryptocurrency filter if provided
+    if cryptoSymbol:
+        query["currencies"] = cryptoSymbol
 
     # Add date filters if provided
     if startDate or endDate:
@@ -60,7 +83,7 @@ def getRedditData(self, subreddit=None, startDate=None, endDate=None):
     return results
 
 
-def getForumData(self, cryptoSymbol=None, startDate=None, endDate=None):
+def getForumData(self, startDate=None, endDate=None, cryptoSymbol=None):
     query = {}
     
     # Add cryptocurrency filter if provided
@@ -79,13 +102,38 @@ def getForumData(self, cryptoSymbol=None, startDate=None, endDate=None):
     projection = {
         "_id": 0,
         "created_at": 1,
-        "currencies": 1,
-        "source": 1,
-        "votes": 1,
         "sentiment": 1
     }
 
     # Execute query with projection and return sorted results
     results = list(self.forumDB.find(query, projection).sort("created_at", -1))
     return results
+
+
+def getArticlesData(self, startDate=None, endDate=None, cryptoSymbol=None):
+    query = {}
+    
+    # Add cryptocurrency filter if provided
+    if cryptoSymbol:
+        query["currencies"] = cryptoSymbol
+    
+    # Add date filters if provided
+    if startDate or endDate:
+        query["date"] = {}
+        if startDate:
+            query["date"]["$gte"] = startDate
+        if endDate:
+            query["date"]["$lte"] = endDate
+
+    # Define fields to return
+    projection = {
+        "_id": 0,
+        "date": 1,
+        "sentiment": 1,
+    }
+
+    # Execute query with projection and return sorted results
+    results = list(self.articlesDB.find(query, projection).sort("date", -1))
+    return results
+
 
