@@ -11,6 +11,7 @@ from Agents.Crypto.FearGreedIndex import FearGreedIndexAgent
 from Agents.News.Articles import ArticlesAgent
 from Agents.News.Forum import ForumAgent
 from Agents.News.Reddit import RedditAgent
+from Agents.Orchestrators.DataAnalysisOrchestrator import DataAnalysisOrchestratorAgent
 from Agents.Orchestrators.GlobalOrchestrator import GlobalOrchestratorAgent
 from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
 from Agents.Orchestrators.NewsOrchestrator import NewsOrchestratorAgent
@@ -29,6 +30,7 @@ async def main():
     globalOrchestratorAgent = GlobalOrchestratorAgent(f"globalOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     cryptoOrchestratorAgent = CryptoOrchestratorAgent(f"cryptoOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     newsOrchestratorAgent = NewsOrchestratorAgent(f"newsOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    dataAnalysisOrchestratorAgent = DataAnalysisOrchestratorAgent(f"dataAnalysisOrchestrator@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
     detailedCryptoDataAgent = DetailedCryptoDataAgent(f"detailedCryptoData@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     fearGreedIndexAgent = FearGreedIndexAgent(f"fearGreedIndex@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
@@ -54,6 +56,7 @@ async def main():
     
     await newsOrchestratorAgent.start(auto_register=True)
     await cryptoOrchestratorAgent.start(auto_register=True)
+    await dataAnalysisOrchestratorAgent.start(auto_register=True)
     await globalOrchestratorAgent.start(auto_register=True)
     
     

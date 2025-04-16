@@ -23,8 +23,8 @@ class GlobalOrchestratorAgent(Agent):
             print(f"{AGENT_NAME} Notifying NewsOrchestrator Agent to start...")
             await sendMessage(self, "newsOrchestrator", "start_agent")
             
-            print(f"{AGENT_NAME} Notifying SentimentAnalysis Agent to start...")
-            await sendMessage(self, "sentimentAnalysis", "start_agent")
+            print(f"{AGENT_NAME} Notifying DataAnalysisOrchestrator Agent to start...")
+            await sendMessage(self, "dataAnalysisOrchestrator", "start_agent")
             
             
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -35,6 +35,14 @@ class GlobalOrchestratorAgent(Agent):
                 match performativeReceived:
                     case "new_data_available":
                         payload = jsonpickle.decode(msg.body)
+                        databaseCollectionName = payload.getDatabaseCollectionName()
+                        providerAgentName = payload.getProviderAgentName()
+                        
+                        if not databaseCollectionName or not providerAgentName:
+                            print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Invalid payload arguments.")
+                            return
+                        
+                        
                         print(f"{AGENT_NAME} New data available to send to prediction model. {payload.toString()}")
                 
                     case _:

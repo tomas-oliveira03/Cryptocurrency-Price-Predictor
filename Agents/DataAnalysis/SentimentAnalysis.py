@@ -28,7 +28,7 @@ class SentimentAnalysisAgent(Agent):
                     case "start_agent":
                         print(f"{AGENT_NAME} Ready to receive information...")
                         
-                    case "new_data_to_analyze":
+                    case "data_analysis_request":
                         payload = jsonpickle.decode(msg.body)
                         await self.agent.queue.put(payload)  
                         print(f"{AGENT_NAME} Payload enqueued...")
@@ -54,8 +54,8 @@ class SentimentAnalysisAgent(Agent):
 
                 payload.setProviderAgentName(self.agent.providerAgentName)
 
-                print(f"{AGENT_NAME} Redirecting message back to Global Orchestrator...")
-                await sendMessage(self, "globalOrchestrator", "new_data_available", payload)
+                print(f"{AGENT_NAME} Redirecting message back to Data Analysis Orchestrator...")
+                await sendMessage(self, "dataAnalysisOrchestrator", "data_analysis_finished", payload)
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
