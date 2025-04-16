@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+import pandas as pd
+
 
 def getFearGreedData(self, startDate=None, endDate=None):
     query = {}
@@ -165,5 +167,23 @@ def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):
         "forum_data": forumData,
         "articles_data": articlesData
     }
+    
+    
+    
+    # Print the number of entries in each key of datasets
+    print("Raw data summary:")
+    total_price_data = min(len(datasets.get("price_data", [])), len(datasets.get("fear_greed_data", [])))
+    data_count = sum(len(datasets[key]) for key in ["reddit_data", "forum_data", "articles_data"] if key in datasets and datasets[key] is not None)
+    
+    for key, value in datasets.items():
+        if isinstance(value, pd.DataFrame):
+            print(f"  {key}: {len(value)} entries")
+        else:
+            print(f"  {key}: {len(value) if hasattr(value, '__len__') else 'N/A'} entries")
+    
+    print(f"\nTotal price data (min of price_data and fear_greed_data): {total_price_data}")
+    print(f"Data count (sum of reddit, forum, and articles): {data_count}\n")
+    
+        
 
     return datasets

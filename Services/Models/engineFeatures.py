@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 def engineFeatures(self, processedData):
@@ -28,13 +29,37 @@ def engineFeatures(self, processedData):
     featuresDF['ma7'] = priceDF['close'].rolling(window=7).mean()
     featuresDF['ma14'] = priceDF['close'].rolling(window=14).mean()
     
+    # Add Exponential Moving Averages (EMAs)
+    featuresDF['ema5'] = priceDF['close'].ewm(span=5, adjust=False).mean()
+    featuresDF['ema14'] = priceDF['close'].ewm(span=14, adjust=False).mean()
+    
+    # Add MA crossovers (signals)
+    featuresDF['ma_crossover'] = (featuresDF['ma5'] > featuresDF['ma14']).astype(int)
+    
     # Add price changes
     featuresDF['price_change_1d'] = priceDF['close'].pct_change(1)
     featuresDF['price_change_3d'] = priceDF['close'].pct_change(3)
     featuresDF['price_change_7d'] = priceDF['close'].pct_change(7)
     
-    # Add volatility (standard deviation of price)
+    # Add volatility measures
     featuresDF['volatility_5d'] = priceDF['close'].rolling(window=5).std()
+    featuresDF['volatility_ratio'] = (featuresDF['volatility_5d'] / priceDF['close']).replace([np.inf, -np.inf], 0)
+    
+    # Add Bollinger Bands
+    std_20 = priceDF['close'].rolling(window=20).std()
+    featuresDF['bb_upper'] = featuresDF['ma14'] + (std_20 * 2)
+    featuresDF['bb_lower'] = featuresDF['ma14'] - (std_20 * 2)
+    featuresDF['bb_width'] = (featuresDF['bb_upper'] - featuresDF['bb_lower']) / featuresDF['ma14']
+    
+    # Calculate RSI (Relative Strength Index)
+    delta = priceDF['close'].diff()
+    gain = delta.where(delta > 0, 0).rolling(window=14).mean()
+    loss = -delta.where(delta < 0, 0).rolling(window=14).mean()
+    rs = gain / loss
+    featuresDF['rsi'] = 100 - (100 / (1 + rs))
+    
+    # Price momentum
+    featuresDF['momentum'] = priceDF['close'] - priceDF['close'].shift(5)
     
     # Add fear and greed index if available
     if not processedData["fear_greed_df"].empty:
@@ -130,7 +155,7 @@ def engineFeatures(self, processedData):
         if 'sentiment_count' in featuresDF.columns:
             featuresDF['sentiment_count'] = featuresDF['sentiment_count'].fillna(0)
     
-    # Forward fill any remaining NaN values - UPDATED to use ffill() instead of fillna(method='ffill')
+    # Forward fill any remaining NaN values
     featuresDF = featuresDF.ffill()
     
     # Drop NaN values that may have been introduced at the beginning by rolling operations

@@ -113,39 +113,75 @@ def make_future_predictions(model, scaler, features, latest_data, days=5):
         DataFrame with date and predicted prices
     """
     # Get the most recent data point
-    base_data = latest_data[features].iloc[-1:].copy()
+    base_data = latest_data.copy()
     
     # Store predictions
     predictions = []
     dates = []
     last_date = latest_data.index[-1]
     
-    # Prepare initial features
-    current_data = base_data.copy()
+    # Create a copy of the data for sequential predictions
+    future_data = latest_data.tail(30).copy()  # Use last 30 days for proper feature calculation
     
     # Make predictions for each future day
     for i in range(days):
+        # Calculate the next date
+        future_date = last_date + timedelta(days=i+1)
+        dates.append(future_date)
+        
+        # Get the features we need for prediction (most recent data point)
+        current_row = future_data.iloc[-1:].copy()
+        
         # Scale the features
-        scaled_features = scaler.transform(current_data)
+        current_features = current_row[features].values
+        scaled_features = scaler.transform(current_features)
         
         # Make prediction
         pred = model.predict(scaled_features)[0]
-        
-        # Calculate date
-        future_date = last_date + timedelta(days=i+1)
-        dates.append(future_date)
         predictions.append(pred)
         
-        # Update features for the next prediction 
-        # (This is simplified - in a real system you'd have a more complex way to update features)
-        # For now, just update the price-related features
-        current_data['close'] = pred
-        current_data['open'] = pred * 0.99  # Simple estimated open price
-        current_data['high'] = pred * 1.02  # Simple estimated high price
-        current_data['low'] = pred * 0.98   # Simple estimated low price
+        # Create a new row for the next day
+        new_row = current_row.copy()
         
-        # Update moving averages and other features as needed
-        # This would require more sophisticated logic in a real system
+        # Update price-related features with prediction
+        new_row['close'] = pred
+        new_row['open'] = pred * (1 + np.random.normal(0, 0.01))  # Add slight randomness
+        new_row['high'] = pred * (1 + abs(np.random.normal(0, 0.015)))  # Slightly higher
+        new_row['low'] = pred * (1 - abs(np.random.normal(0, 0.01)))  # Slightly lower
+        
+        # Update moving averages properly
+        if 'ma5' in features:
+            recent_closes = list(future_data.tail(4)['close'].values) + [pred]
+            new_row['ma5'] = sum(recent_closes) / 5
+        
+        if 'ma7' in features:
+            recent_closes = list(future_data.tail(6)['close'].values) + [pred]
+            new_row['ma7'] = sum(recent_closes) / 7
+            
+        if 'ma14' in features:
+            recent_closes = list(future_data.tail(13)['close'].values) + [pred]
+            new_row['ma14'] = sum(recent_closes) / 14
+        
+        # Update price changes
+        if 'price_change_1d' in features:
+            new_row['price_change_1d'] = (pred / future_data.iloc[-1]['close']) - 1
+            
+        if 'price_change_3d' in features and len(future_data) >= 3:
+            new_row['price_change_3d'] = (pred / future_data.iloc[-3]['close']) - 1
+            
+        if 'price_change_7d' in features and len(future_data) >= 7:
+            new_row['price_change_7d'] = (pred / future_data.iloc[-7]['close']) - 1
+        
+        # Update volatility
+        if 'volatility_5d' in features and len(future_data) >= 4:
+            recent_closes = list(future_data.tail(4)['close'].values) + [pred]
+            new_row['volatility_5d'] = np.std(recent_closes)
+        
+        # Set the index for the new row
+        new_row.index = [future_date]
+        
+        # Add the new row to the future data
+        future_data = pd.concat([future_data, new_row])
     
     # Create prediction DataFrame
     prediction_df = pd.DataFrame({

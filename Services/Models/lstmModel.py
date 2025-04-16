@@ -1,0 +1,255 @@
+import numpy as np
+import pandas as pd
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+def create_sequences(X, y, seq_length):
+    """Create sequences for LSTM input"""
+    X_seq, y_seq = [], []
+    for i in range(len(X) - seq_length):
+        X_seq.append(X[i:i + seq_length])
+        y_seq.append(y[i + seq_length])
+    
+    return np.array(X_seq), np.array(y_seq)
+
+def train_lstm_model(features_df, target_column='close', forecast_days=5, test_size=0.2, seq_length=10):
+    """
+    Train an LSTM model for price prediction
+    
+    Args:
+        features_df: DataFrame with engineered features
+        target_column: Column to predict
+        forecast_days: Number of days ahead to predict
+        test_size: Proportion of data for testing
+        seq_length: Length of input sequences for LSTM
+        
+    Returns:
+        Dictionary with model, scalers, and evaluation results
+    """
+    print("\nTraining LSTM model...")
+    
+    # Create target variable (shifted price)
+    df = features_df.copy()
+    df['target'] = df[target_column].shift(-forecast_days)
+    
+    # Drop rows with NaN targets
+    df = df.dropna()
+    
+    # Separate features and target
+    X = df.drop('target', axis=1)
+    y = df['target']
+    
+    # Standardize features and target
+    feature_scaler = StandardScaler()
+    target_scaler = StandardScaler()
+    
+    X_scaled = feature_scaler.fit_transform(X)
+    y_scaled = target_scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
+    
+    # Create sequences for LSTM
+    X_seq, y_seq = create_sequences(X_scaled, y_scaled, seq_length)
+    
+    print(f"LSTM sequence shape: {X_seq.shape}")
+    
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_seq, y_seq, test_size=test_size, shuffle=False
+    )
+    
+    # Define LSTM architecture
+    model = Sequential([
+        LSTM(50, activation='relu', return_sequences=True, 
+             input_shape=(X_train.shape[1], X_train.shape[2])),
+        Dropout(0.2),
+        LSTM(50, activation='relu'),
+        Dropout(0.2),
+        Dense(1)
+    ])
+    
+    # Compile the model
+    model.compile(optimizer='adam', loss='mse')
+    
+    # Train the model with early stopping
+    from tensorflow.keras.callbacks import EarlyStopping
+    early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    
+    history = model.fit(
+        X_train, y_train,
+        epochs=100,
+        batch_size=32,
+        validation_split=0.1,
+        callbacks=[early_stop],
+        verbose=1
+    )
+    
+    # Evaluate the model
+    y_pred = model.predict(X_test).flatten()
+    
+    # Calculate metrics on scaled data
+    mse = mean_squared_error(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+    
+    # Convert predictions back to original scale for interpretable metrics
+    y_test_orig = target_scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+    y_pred_orig = target_scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
+    
+    mse_orig = mean_squared_error(y_test_orig, y_pred_orig)
+    rmse_orig = np.sqrt(mse_orig)
+    mae_orig = mean_absolute_error(y_test_orig, y_pred_orig)
+    r2 = r2_score(y_test_orig, y_pred_orig)
+    
+    # Calculate MAPE
+    mape = np.mean(np.abs((y_test_orig - y_pred_orig) / y_test_orig)) * 100
+    
+    # Print evaluation metrics
+    print(f"LSTM Model Metrics:")
+    print(f"  MSE: {mse_orig:.4f}")
+    print(f"  RMSE: {rmse_orig:.4f}")
+    print(f"  MAE: {mae_orig:.4f}")
+    print(f"  R²: {r2:.4f}")
+    print(f"  MAPE: {mape:.2f}%")
+    
+    # Results dataframe
+    results_df = pd.DataFrame({
+        'actual': y_test_orig,
+        'predicted': y_pred_orig,
+        'error': y_test_orig - y_pred_orig,
+        'error_pct': ((y_test_orig - y_pred_orig) / y_test_orig) * 100
+    })
+    
+    return {
+        'model': model,
+        'feature_scaler': feature_scaler,
+        'target_scaler': target_scaler,
+        'seq_length': seq_length,
+        'feature_names': X.columns.tolist(),
+        'metrics': {
+            'mse': mse_orig,
+            'rmse': rmse_orig,
+            'mae': mae_orig,
+            'r2': r2,
+            'mape': mape
+        },
+        'results': results_df,
+        'history': history.history
+    }
+
+def predict_with_lstm(model_results, features_df, days=5):
+    """
+    Make predictions using the trained LSTM model
+    
+    Args:
+        model_results: Dictionary with trained LSTM model and scalers
+        features_df: DataFrame with the most recent data
+        days: Number of days to predict
+        
+    Returns:
+        DataFrame with predictions
+    """
+    # Extract model components
+    model = model_results['model']
+    feature_scaler = model_results['feature_scaler']
+    target_scaler = model_results['target_scaler']
+    seq_length = model_results['seq_length']
+    feature_names = model_results['feature_names']
+    
+    # Ensure we have the right features
+    features = features_df[feature_names].copy()
+    
+    # Get the most recent sequence
+    latest_data = features.iloc[-seq_length:].copy()
+    
+    # Scale the features
+    scaled_data = feature_scaler.transform(latest_data)
+    
+    # Store predictions
+    predictions = []
+    dates = []
+    last_date = features.index[-1]
+    
+    # Create a copy of the scaled data to update during prediction
+    prediction_sequence = scaled_data.copy()
+    
+    # Make predictions for each future day
+    for i in range(days):
+        # Reshape for LSTM input [samples, time steps, features]
+        seq_reshape = prediction_sequence.reshape(1, seq_length, len(feature_names))
+        
+        # Predict
+        scaled_pred = model.predict(seq_reshape)[0][0]
+        
+        # Convert back to original scale
+        prediction = target_scaler.inverse_transform([[scaled_pred]])[0][0]
+        
+        # Calculate next date
+        future_date = last_date + pd.Timedelta(days=i+1)
+        dates.append(future_date)
+        predictions.append(prediction)
+        
+        # Update the sequence for next prediction:
+        # - Remove the oldest day
+        # - Add the new prediction day
+        
+        # First, create a new row based on the last available data
+        new_features = features.iloc[-1].copy()
+        
+        # Update price-related columns with the prediction
+        new_features['close'] = prediction
+        new_features['open'] = prediction * 0.99
+        new_features['high'] = prediction * 1.02
+        new_features['low'] = prediction * 0.98
+        
+        # For other technical indicators, we'll use simplified approximations
+        if 'ma5' in feature_names:
+            # Get the latest 4 days and add the new prediction
+            ma5_values = list(features.iloc[-4:]['close'].values) + [prediction]
+            new_features['ma5'] = sum(ma5_values) / 5
+            
+        if 'ma7' in feature_names:
+            ma7_values = list(features.iloc[-6:]['close'].values) + [prediction]
+            new_features['ma7'] = sum(ma7_values) / min(7, len(ma7_values))
+            
+        if 'ma14' in feature_names:
+            ma14_values = list(features.iloc[-13:]['close'].values) + [prediction]
+            new_features['ma14'] = sum(ma14_values) / min(14, len(ma14_values))
+        
+        if 'price_change_1d' in feature_names:
+            new_features['price_change_1d'] = (prediction / features.iloc[-1]['close']) - 1
+            
+        if 'price_change_3d' in feature_names:
+            if len(features) >= 3:
+                new_features['price_change_3d'] = (prediction / features.iloc[-3]['close']) - 1
+        
+        if 'price_change_7d' in feature_names:
+            if len(features) >= 7:
+                new_features['price_change_7d'] = (prediction / features.iloc[-7]['close']) - 1
+                
+        if 'volatility_5d' in feature_names:
+            vol_values = list(features.iloc[-4:]['close'].values) + [prediction]
+            new_features['volatility_5d'] = np.std(vol_values)
+        
+        # Carry forward other features like fear_greed_index and sentiment metrics
+        for col in feature_names:
+            if col not in new_features or pd.isna(new_features[col]):
+                new_features[col] = features.iloc[-1][col]
+        
+        # Scale the new row
+        new_scaled = feature_scaler.transform([new_features.values])[0]
+        
+        # Remove first row and append the new one to the sequence
+        prediction_sequence = np.vstack([prediction_sequence[1:], new_scaled])
+        
+        # Add the new features to our features dataframe for the next iteration
+        features.loc[future_date] = new_features
+    
+    # Create prediction DataFrame
+    prediction_df = pd.DataFrame({
+        'date': dates,
+        'predicted_price': predictions
+    })
+    prediction_df.set_index('date', inplace=True)
+    
+    return prediction_df
