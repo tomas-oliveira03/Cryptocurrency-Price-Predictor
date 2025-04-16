@@ -58,7 +58,7 @@ class PredictionModel:
         print(f"Raw features saved to {features_csv}")
         
         # Step 4: Train standard prediction model and evaluate
-        print("Training basic prediction model...")
+        print("Training prediction models...")
         model_results = simplePredictionModel.train_model(
             featuresDF, 
             target_column='close', 
@@ -66,9 +66,18 @@ class PredictionModel:
         )
         
         # Print model evaluation metrics
-        print("\nBasic Model Evaluation Metrics:")
+        print("\nBest Model Evaluation Metrics:")
+        print(f"Best model: {model_results.get('best_model', 'unknown')}")
         for metric, value in model_results['metrics'].items():
             print(f"  {metric.upper()}: {value:.4f}")
+        
+        # Print comparison of all models
+        print("\nAll Models Comparison:")
+        for model_name, metrics in model_results.get('all_metrics', {}).items():
+            print(f"  {model_name.upper()}:")
+            for metric in ['rmse', 'mape', 'r2']:
+                if metric in metrics:
+                    print(f"    {metric.upper()}: {metrics[metric]:.4f}")
         
         # Step 5: Train LSTM model
         try:
@@ -100,6 +109,47 @@ class PredictionModel:
             print(f"\nError training LSTM model: {e}")
             print("Continuing with tree-based models only")
             use_lstm = False
+        
+        # Select best model for predictions
+        best_model = model_results['model']
+        
+        # Run backtest to evaluate model performance on historical data
+        print("\nRunning backtest on historical data...")
+        backtest_results = simplePredictionModel.backtest_model(
+            best_model,
+            model_results['scaler'],
+            model_results['features'],
+            featuresDF
+        )
+        
+        # Make predictions for the next 5 days
+        print("\nMaking predictions for the next 5 days...")
+        future_predictions = simplePredictionModel.make_future_predictions(
+            best_model,
+            model_results['scaler'],
+            model_results['features'],
+            featuresDF,
+            days=5
+        )
+        
+        # Print detailed prediction information
+        print("\nDetailed Price Predictions:")
+        for date, row in future_predictions.iterrows():
+            # Calculate day-over-day change if not the first prediction
+            if date == future_predictions.index[0]:
+                last_price = featuresDF['close'].iloc[-1]
+                day_change_pct = ((row['predicted_price'] - last_price) / last_price) * 100
+                print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f} ({day_change_pct:+.2f}% from last known price)")
+            else:
+                prev_price = future_predictions['predicted_price'][future_predictions.index.get_loc(date) - 1]
+                day_change_pct = ((row['predicted_price'] - prev_price) / prev_price) * 100
+                print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f} ({day_change_pct:+.2f}% daily change)")
+        
+        # Calculate overall prediction trend
+        first_pred = future_predictions['predicted_price'].iloc[0]
+        last_pred = future_predictions['predicted_price'].iloc[-1]
+        total_change_pct = ((last_pred - first_pred) / first_pred) * 100
+        print(f"\nOverall {len(future_predictions)}-day prediction trend: {total_change_pct:+.2f}%")
         
         # Step 6: Optimize tree-based models with hyperparameter tuning
         print("\nStarting model optimization...")
