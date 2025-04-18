@@ -49,7 +49,7 @@ class PredictionModel:
         print("Feature names:", ", ".join(featuresDF.columns.tolist()[:5]) + "...")
         
         # Save raw feature data first
-        csv_dir = "data_exports"
+        csv_dir = "Services/Models/data/data_exports"
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir)
         
@@ -169,7 +169,7 @@ class PredictionModel:
         feature_importance = modelOptimizer.analyze_feature_importance(
             model_results['model'],
             model_results['features'],
-            save_path="feature_importance.png"
+            save_path="Services/Models/data/feature_importance.png"
         )
         
         print("\nTop 10 most important features:")
@@ -218,7 +218,7 @@ class PredictionModel:
                     
                     # Plot model comparison
                     modelOptimizer.plot_model_comparison(
-                        ensemble_results, y_test, save_path="model_comparison.png"
+                        ensemble_results, y_test, save_path="Services/Models/data/model_comparison.png"
                     )
                     
                     # Save the best models
@@ -251,11 +251,11 @@ class PredictionModel:
         simplePredictionModel.visualize_predictions(
             featuresDF[['close']],
             future_predictions,
-            save_path="crypto_price_prediction.png"
+            save_path="Services/Models/data/crypto_price_prediction.png"
         )
         
         # Save the engineered features to CSV
-        csv_dir = "data_exports"
+        csv_dir = "Services/Models/data/data_exports"
         if not os.path.exists(csv_dir):
             os.makedirs(csv_dir)
         
