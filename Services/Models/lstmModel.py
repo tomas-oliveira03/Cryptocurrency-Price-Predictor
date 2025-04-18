@@ -300,3 +300,142 @@ def predict_with_lstm(model_results, features_df, days=5):
     prediction_df.set_index('date', inplace=True)
     
     return prediction_df
+
+def backtest_lstm_model(model_results, features_df, lookback_days=30, prediction_days=5):
+    """
+    Backtest the LSTM model on historical data.
+
+    Args:
+        model_results: Dictionary containing the trained LSTM model, scalers, etc.
+        features_df: DataFrame with historical features.
+        lookback_days: Number of days of history to use for each prediction point.
+                       Should be >= seq_length.
+        prediction_days: Number of days ahead to predict at each point.
+
+    Returns:
+        Dictionary with backtest results and metrics.
+    """
+    print("Backtesting LSTM model...")
+
+    seq_length = model_results['seq_length']
+    target_column = 'close' # Assuming 'close' is the target
+
+    # Ensure lookback includes sequence length
+    effective_lookback = max(lookback_days, seq_length)
+
+    # Ensure we have enough data
+    if len(features_df) < effective_lookback + prediction_days + 20: # Add buffer
+        print("Not enough data for LSTM backtesting")
+        return {
+            'results': pd.DataFrame(),
+            'metrics': {'mse': float('nan'), 'rmse': float('nan'), 'mae': float('nan'), 'mape': float('nan')}
+        }
+
+    # Determine backtest points (e.g., every 10 days)
+    # Start index ensures we have enough data for the first sequence + lookback
+    start_index = effective_lookback
+    backtest_points = list(range(start_index, len(features_df) - prediction_days, 10))
+
+    results = []
+
+    for i in backtest_points:
+        # Get historical data up to this point (including lookback for feature calculation)
+        historical_data = features_df.iloc[:i].copy()
+
+        # Get actual future data for comparison
+        actual_future = features_df.iloc[i : i + prediction_days].copy()
+
+        if len(actual_future) < prediction_days:
+            continue # Skip if not enough future data
+
+        # Make prediction using the LSTM logic
+        # Use historical_data which includes enough points for the initial sequence
+        try:
+            future_pred_df = predict_with_lstm(
+                model_results,
+                historical_data, # Pass the historical segment
+                days=prediction_days
+            )
+        except Exception as e:
+             print(f"Error during LSTM prediction at index {i}: {e}")
+             continue # Skip this point if prediction fails
+
+
+        # Compare prediction with actual data
+        for j in range(min(len(future_pred_df), len(actual_future))):
+            pred_date = future_pred_df.index[j]
+            # Find the closest date in actual data (usually the same index)
+            actual_date = actual_future.index[j]
+
+            pred_price = future_pred_df['predicted_price'].iloc[j]
+            actual_price = actual_future[target_column].loc[actual_date]
+
+            error = actual_price - pred_price
+            error_pct = (error / actual_price) * 100 if actual_price != 0 else 0
+
+            results.append({
+                'prediction_date': historical_data.index[-1], # Date prediction was made
+                'target_date': pred_date,
+                'predicted_price': pred_price,
+                'actual_price': actual_price,
+                'error': error,
+                'error_pct': error_pct
+            })
+
+    # Create results DataFrame
+    results_df = pd.DataFrame(results)
+
+    # Check if we have results before calculating metrics
+    if results_df.empty:
+        print("No valid LSTM backtest results generated")
+        return {
+            'results': pd.DataFrame(),
+            'metrics': {'mse': float('nan'), 'rmse': float('nan'), 'mae': float('nan'), 'mape': float('nan')}
+        }
+
+    # Calculate aggregate metrics
+    actual = results_df['actual_price']
+    predicted = results_df['predicted_price']
+
+    # Ensure no NaNs before calculating metrics
+    valid_idx = actual.notna() & predicted.notna()
+    if not valid_idx.all():
+        print(f"Warning: Found NaNs in backtest results. Dropping {len(results_df) - valid_idx.sum()} rows.")
+        actual = actual[valid_idx]
+        predicted = predicted[valid_idx]
+        results_df = results_df[valid_idx]
+
+    if actual.empty:
+         print("No valid non-NaN backtest results after filtering.")
+         return {
+            'results': pd.DataFrame(),
+            'metrics': {'mse': float('nan'), 'rmse': float('nan'), 'mae': float('nan'), 'mape': float('nan')}
+        }
+
+
+    mse = mean_squared_error(actual, predicted)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(actual, predicted)
+
+    # Calculate MAPE safely
+    valid_actual = actual[actual != 0]
+    if not valid_actual.empty:
+        mape = np.mean(np.abs((actual[actual != 0] - predicted[actual != 0]) / actual[actual != 0])) * 100
+    else:
+        mape = float('nan')
+
+    print(f"LSTM Backtest Results:")
+    print(f"  MSE: {mse:.4f}")
+    print(f"  RMSE: {rmse:.4f}")
+    print(f"  MAE: {mae:.4f}")
+    print(f"  MAPE: {mape:.2f}%")
+
+    return {
+        'results': results_df,
+        'metrics': {
+            'mse': mse,
+            'rmse': rmse,
+            'mae': mae,
+            'mape': mape
+        }
+    }

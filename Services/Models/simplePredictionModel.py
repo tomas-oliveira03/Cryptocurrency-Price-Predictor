@@ -42,7 +42,7 @@ def train_model(features_df, target_column='close', forecast_days=5, test_size=0
         test_size: Proportion of data to use for testing
         
     Returns:
-        Dictionary with model, scaler, evaluation metrics and predictions
+        Dictionary with model, scaler, evaluation metrics, predictions, X_test, and y_test
     """
     # Create the target variable
     data = create_target(features_df, target_column, forecast_days)
@@ -171,7 +171,9 @@ def train_model(features_df, target_column='close', forecast_days=5, test_size=0
         },
         'results': results_df,
         'best_model': best_model_name,
-        'all_metrics': all_results
+        'all_metrics': all_results,
+        'X_test': X_test,  # Return X_test
+        'y_test': y_test   # Return y_test
     }
 
 def make_future_predictions(model, scaler, features, latest_data, days=5):

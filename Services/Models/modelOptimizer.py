@@ -296,14 +296,51 @@ def plot_model_comparison(results, y_test, save_path=None):
     plt.plot(y_test.index, y_test, label='Actual', color='black', linewidth=2)
     
     # Plot predictions for each model
-    colors = ['blue', 'green', 'red', 'purple', 'orange']
-    for i, (name, pred) in enumerate(results['predictions'].items()):
-        plt.plot(y_test.index, pred, label=f'{name} (RMSE: {results["metrics"][name]["rmse"]:.2f})', 
-                 color=colors[i % len(colors)], linestyle='--')
-    
+    colors = ['blue', 'green', 'red', 'purple', 'orange', 'cyan', 'brown'] # Added more colors
+    color_idx = 0
+    for name, pred in results['predictions'].items():
+        # --- Check if prediction array is valid before plotting ---
+        if pred is None or (isinstance(pred, (np.ndarray, pd.Series)) and np.all(np.isnan(pred))):
+             print(f"Warning: Skipping plot for model '{name}' due to all NaN predictions.")
+             # Still add legend entry but indicate issue
+             plt.plot([], [], label=f'{name} (RMSE: N/A - Invalid Data)',
+                      color=colors[color_idx % len(colors)], linestyle=':') # Plot empty line for legend
+        else:
+             # Ensure pred is a numpy array for consistent indexing with y_test.index
+             if isinstance(pred, pd.Series):
+                  pred_values = pred.values
+             else:
+                  pred_values = pred
+
+             # Ensure lengths match, otherwise plot might fail
+             if len(pred_values) == len(y_test.index):
+                  plt.plot(y_test.index, pred_values, label=f'{name} (RMSE: {results["metrics"].get(name, {}).get("rmse", float("nan")):.2f})',
+                           color=colors[color_idx % len(colors)], linestyle='--')
+             else:
+                  print(f"Warning: Length mismatch for model '{name}'. Skipping plot.")
+                  plt.plot([], [], label=f'{name} (RMSE: N/A - Length Mismatch)',
+                           color=colors[color_idx % len(colors)], linestyle=':')
+        color_idx += 1
+        # ---------------------------------------------------------
+
     # Plot ensemble prediction
-    plt.plot(y_test.index, results['ensemble_pred'], label=f'Ensemble (RMSE: {results["metrics"]["ensemble"]["rmse"]:.2f})', 
-             color='magenta', linewidth=2, linestyle='-.')
+    ensemble_pred = results.get('ensemble_pred')
+    ensemble_metrics = results.get('metrics', {}).get('ensemble', {})
+    # --- Check if ensemble prediction array is valid before plotting ---
+    if ensemble_pred is None or np.all(np.isnan(ensemble_pred)):
+         print("Warning: Skipping plot for Ensemble due to all NaN predictions.")
+         plt.plot([], [], label=f'Ensemble (RMSE: {ensemble_metrics.get("rmse", float("nan")):.2f})',
+                  color='magenta', linestyle='-.') # Plot empty line for legend
+    else:
+         # Ensure lengths match
+         if len(ensemble_pred) == len(y_test.index):
+              plt.plot(y_test.index, ensemble_pred, label=f'Ensemble (RMSE: {ensemble_metrics.get("rmse", float("nan")):.2f})',
+                       color='magenta', linewidth=2, linestyle='-.')
+         else:
+              print("Warning: Length mismatch for Ensemble prediction. Skipping plot.")
+              plt.plot([], [], label=f'Ensemble (RMSE: N/A - Length Mismatch)',
+                       color='magenta', linestyle='-.')
+    # -------------------------------------------------------------
     
     plt.title('Model Comparison: Predicted vs Actual Values')
     plt.xlabel('Date')

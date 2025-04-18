@@ -5,6 +5,7 @@ import numpy as np
 from bson import CodecOptions
 from pymongo import MongoClient
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 import fetchData
 import preProcessor
@@ -65,6 +66,9 @@ class PredictionModel:
             forecast_days=5
         )
         
+        # Capture X_test and y_test
+        y_test_initial = model_results['y_test']
+
         # Print model evaluation metrics
         print("\nBest Model Evaluation Metrics:")
         print(f"Best model: {model_results.get('best_model', 'unknown')}")
@@ -109,28 +113,156 @@ class PredictionModel:
             print(f"\nError training LSTM model: {e}")
             print("Continuing with tree-based models only")
             use_lstm = False
-        
-        # Select best model for predictions
-        best_model = model_results['model']
-        
-        # Run backtest to evaluate model performance on historical data
-        print("\nRunning backtest on historical data...")
-        backtest_results = simplePredictionModel.backtest_model(
-            best_model,
-            model_results['scaler'],
-            model_results['features'],
-            featuresDF
+            lstm_results = None
+
+        # Plot Comparison of All Models on Test Set
+        print("\nGenerating comparison plot for all models on the test set...")
+        predictions_for_plot = {}
+        metrics_for_plot = {}
+        all_preds_list = []
+
+        # Add predictions from initial models (RF, XGB, MA)
+        for model_name, results in model_results['all_metrics'].items():
+            predictions_for_plot[model_name] = results['pred']
+            metrics_for_plot[model_name] = {k: v for k, v in results.items() if k in ['mse', 'rmse', 'mae', 'r2', 'mape']}
+            if model_name != 'moving_avg':  # Don't include MA in ensemble average
+                all_preds_list.append(results['pred'])
+
+        # Add LSTM predictions if available and successful
+        if use_lstm and lstm_results:
+            # Align LSTM predictions with the y_test_initial index
+            lstm_test_preds_aligned = lstm_results['results']['predicted'].reindex(y_test_initial.index)
+            # --- Check for NaNs after reindex/fill ---
+            filled_lstm_preds = lstm_test_preds_aligned.bfill().ffill()
+            if filled_lstm_preds.isnull().any():
+                 print("Warning: NaNs still present in LSTM predictions after filling. Plotting might be affected.")
+            # -----------------------------------------
+            predictions_for_plot['lstm'] = filled_lstm_preds
+            metrics_for_plot['lstm'] = lstm_results['metrics']
+            # --- Add only if not all NaN ---
+            if not filled_lstm_preds.isnull().all():
+                 all_preds_list.append(filled_lstm_preds)
+            else:
+                 print("Warning: LSTM predictions are all NaN after alignment.")
+            # -------------------------------
+
+        # Calculate a simple ensemble average for plotting, ignoring NaNs
+        if all_preds_list:
+            # Ensure all arrays are numpy arrays for averaging
+            valid_preds = []
+            for pred in all_preds_list:
+                 if isinstance(pred, (np.ndarray, pd.Series)) and len(pred) == len(y_test_initial):
+                      # --- Check for all NaNs before adding ---
+                      if isinstance(pred, pd.Series) and pred.isnull().all():
+                           print(f"Warning: Skipping an all-NaN prediction series during ensemble calculation.")
+                           continue
+                      elif isinstance(pred, np.ndarray) and np.isnan(pred).all():
+                           print(f"Warning: Skipping an all-NaN prediction array during ensemble calculation.")
+                           continue
+                      # --------------------------------------
+                      valid_preds.append(pred.values if isinstance(pred, pd.Series) else pred)
+
+            if valid_preds:
+                # --- Use np.nanmean to calculate average, ignoring NaNs ---
+                ensemble_pred_for_plot = np.nanmean(np.array(valid_preds), axis=0)
+                # ----------------------------------------------------------
+            else:
+                print("Warning: No valid predictions found for ensemble calculation.")
+                ensemble_pred_for_plot = np.full(len(y_test_initial), np.nan) # Fill with NaN if no valid preds
+        else:
+            print("Warning: No base predictions available for ensemble calculation.")
+            ensemble_pred_for_plot = np.full(len(y_test_initial), np.nan) # Fill with NaN
+
+        # --- Add Debug Print ---
+        print(f"Ensemble prediction contains NaNs: {np.isnan(ensemble_pred_for_plot).any()}")
+        # -----------------------
+
+        # Calculate metrics for the ensemble prediction
+        # Check for NaNs before calculating metrics (use np.isfinite on the potentially NaN result from nanmean)
+        valid_ensemble_idx = np.isfinite(y_test_initial.values) & np.isfinite(ensemble_pred_for_plot)
+        if valid_ensemble_idx.sum() > 0: # Check if there are any valid points to compare
+            y_true_valid = y_test_initial.values[valid_ensemble_idx]
+            y_pred_valid = ensemble_pred_for_plot[valid_ensemble_idx]
+
+            ensemble_mse = mean_squared_error(y_true_valid, y_pred_valid)
+            ensemble_rmse = np.sqrt(ensemble_mse)
+            ensemble_mae = mean_absolute_error(y_true_valid, y_pred_valid)
+            ensemble_r2 = r2_score(y_true_valid, y_pred_valid)
+
+            # Handle potential division by zero in MAPE for valid points
+            valid_mape_indices = y_true_valid != 0
+            if valid_mape_indices.any():
+                 ensemble_mape = np.mean(np.abs((y_true_valid[valid_mape_indices] - y_pred_valid[valid_mape_indices]) / y_true_valid[valid_mape_indices])) * 100
+            else:
+                 ensemble_mape = np.nan
+
+            metrics_for_plot['ensemble'] = {
+                'mse': ensemble_mse, 'rmse': ensemble_rmse, 'mae': ensemble_mae,
+                'r2': ensemble_r2, 'mape': ensemble_mape
+            }
+            print(f"Calculated ensemble metrics (RMSE: {ensemble_rmse:.2f}) using {valid_ensemble_idx.sum()} valid points.")
+        else:
+            print("Warning: No valid overlapping points found between y_test and ensemble predictions. Skipping ensemble metrics calculation for plot.")
+            metrics_for_plot['ensemble'] = {'rmse': np.nan, 'mse': np.nan, 'mae': np.nan, 'r2': np.nan, 'mape': np.nan} # Ensure all keys exist
+
+        comparison_results = {
+            'predictions': predictions_for_plot,
+            'metrics': metrics_for_plot,
+            'ensemble_pred': ensemble_pred_for_plot
+        }
+
+        # --- Add Debug Print ---
+        print(f"Models included in plot data: {list(comparison_results['predictions'].keys())}")
+        # -----------------------
+
+        modelOptimizer.plot_model_comparison(
+            comparison_results,
+            y_test_initial,
+            save_path="Services/Models/data/all_models_test_comparison.png"
         )
-        
+
+        # Select best model for predictions (based on initial comparison or LSTM)
+        if use_lstm and lstm_results:
+            best_model_for_future = lstm_results['model']  # Use LSTM if it's better
+            print("\nSelected LSTM model for future predictions.")
+            # --- Use LSTM backtesting function ---
+            print("\nRunning backtest on historical data (LSTM)...")
+            backtest_results = lstmModel.backtest_lstm_model(
+                lstm_results,
+                featuresDF
+            )
+            # ------------------------------------
+        else:
+            best_model_for_future = model_results['model']  # Use best from initial training
+            print(f"\nSelected {model_results['best_model']} model for future predictions.")
+            # --- Use simple model backtesting function ---
+            print("\nRunning backtest on historical data (Tree-based)...")
+            backtest_results = simplePredictionModel.backtest_model(
+                best_model_for_future,
+                model_results['scaler'],
+                model_results['features'],
+                featuresDF
+            )
+            # -----------------------------------------
+
         # Make predictions for the next 5 days
         print("\nMaking predictions for the next 5 days...")
-        future_predictions = simplePredictionModel.make_future_predictions(
-            best_model,
-            model_results['scaler'],
-            model_results['features'],
-            featuresDF,
-            days=5
-        )
+        # --- Use the correct prediction function based on the selected model ---
+        if use_lstm and lstm_results:
+             future_predictions = lstmModel.predict_with_lstm(
+                  lstm_results,
+                  featuresDF,
+                  days=5
+             )
+        else:
+             future_predictions = simplePredictionModel.make_future_predictions(
+                  best_model_for_future,
+                  model_results['scaler'],
+                  model_results['features'],
+                  featuresDF,
+                  days=5
+             )
+        # --------------------------------------------------------------------
         
         # Print detailed prediction information
         print("\nDetailed Price Predictions:")
@@ -166,23 +298,26 @@ class PredictionModel:
         
         # Analyze feature importance of the basic model
         print("\nAnalyzing feature importance...")
-        feature_importance = modelOptimizer.analyze_feature_importance(
-            model_results['model'],
-            model_results['features'],
-            save_path="Services/Models/data/feature_importance.png"
-        )
+        # --- Ensure feature importance uses a tree-based model ---
+        # Use the best model from the initial simple training run for importance
+        initial_best_tree_model_name = model_results['best_model']
+        if initial_best_tree_model_name != 'moving_avg':
+             initial_best_tree_model = model_results['all_metrics'][initial_best_tree_model_name]['model']
+             feature_importance = modelOptimizer.analyze_feature_importance(
+                  initial_best_tree_model,
+                  model_results['features'], # Use features from initial run
+                  save_path="Services/Models/data/feature_importance.png"
+             )
+             print("\nTop 10 most important features:")
+             print(feature_importance.head(10))
+        else:
+             print("Skipping feature importance analysis (best initial model was Moving Average).")
+             feature_importance = pd.DataFrame() # Empty dataframe
+        # -------------------------------------------------------
         
-        print("\nTop 10 most important features:")
-        print(feature_importance.head(10))
-        
-        # For LSTM path
+        # For LSTM path - Future predictions already handled above
         if use_lstm:
-            print("\nMaking predictions with LSTM model...")
-            future_predictions = lstmModel.predict_with_lstm(
-                lstm_results,
-                featuresDF,
-                days=5
-            )
+            pass # Future predictions handled before detailed printout
         # For tree-based models path
         else:
             # Optimize models if dataset is large enough (skip for small datasets)
@@ -232,18 +367,24 @@ class PredictionModel:
                     print(f"\nBest model: {best_model_name}")
                     best_model = optimized_models.get(best_model_name, model_results['model'])
                     
-                    # Make predictions using the best model
-                    print("\nMaking predictions with the best model...")
-                    future_predictions = simplePredictionModel.make_future_predictions(
-                        best_model,
-                        model_results['scaler'],
-                        model_results['features'],
-                        featuresDF,
-                        days=5
-                    )
-        
-        # Step 7: Print and visualize predictions
-        print("\nPrice Predictions:")
+                    # Make predictions using the best optimized model
+                    print("\nMaking predictions with the best optimized model...")
+                    # --- Update future_predictions if optimization occurred and improved ---
+                    if best_model_for_future != model_results['model']: # Check if optimization changed the model
+                         future_predictions = simplePredictionModel.make_future_predictions(
+                              best_model_for_future, # Use the potentially updated best model
+                              model_results['scaler'],
+                              model_results['features'],
+                              featuresDF,
+                              days=5
+                         )
+                    # -----------------------------------------------------------------------
+                else: # If ensemble wasn't trained (e.g., only one optimized model)
+                    print("Only one model available after optimization or optimization failed; using initial best model predictions.")
+                    pass # Assuming future_predictions from initial best model is sufficient if optimization is limited
+
+        # Step 7: Print and visualize FINAL future predictions
+        print("\nFinal Future Price Predictions:")
         for date, row in future_predictions.iterrows():
             print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f}")
         
