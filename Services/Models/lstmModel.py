@@ -16,161 +16,287 @@ def create_sequences(X, y, seq_length):
     
     return np.array(X_seq), np.array(y_seq)
 
-def train_lstm_model(X_train_seq, y_train_seq, X_test_seq, y_test_seq, target_scaler, seq_length, n_features):
+def train_lstm_model(features_df, target_column='close', forecast_days=5, test_size=0.2, seq_length=10):
     """
-    Builds, trains, and evaluates an LSTM model.
-
+    Train an LSTM model for price prediction
+    
     Args:
-        X_train_seq, y_train_seq: Training sequences.
-        X_test_seq, y_test_seq: Testing sequences.
-        target_scaler: Fitted scaler for the target variable.
-        seq_length: Sequence length used.
-        n_features: Number of input features.
-
+        features_df: DataFrame with engineered features
+        target_column: Column to predict
+        forecast_days: Number of days ahead to predict
+        test_size: Proportion of data for testing
+        seq_length: Length of input sequences for LSTM
+        
     Returns:
-        Dictionary containing the trained model, metrics (train, val, test), and history.
-        Returns None if training fails or not enough data.
+        Dictionary with model, scalers, and evaluation results
     """
-    print("Building LSTM model...")
-    if len(X_train_seq) < 10 or len(X_test_seq) < 1: # Need minimum data
-        print("Not enough sequence data for LSTM training.")
-        return None
-
-    # Simplified LSTM architecture
-    units = 50
-    dropout_rate = 0.2
-    epochs = 100
-    batch_size = min(32, len(X_train_seq) // 2 if len(X_train_seq) >= 2 else 1)
-
+    print("\nTraining LSTM model...")
+    
+    # Create target variable (shifted price)
+    df = features_df.copy()
+    df['target'] = df[target_column].shift(-forecast_days)
+    
+    # Drop rows with NaN targets
+    df = df.dropna()
+    
+    # Separate features and target
+    X = df.drop('target', axis=1)
+    y = df['target']
+    
+    # Use MinMaxScaler instead of StandardScaler
+    feature_scaler = MinMaxScaler(feature_range=(0, 1))
+    target_scaler = MinMaxScaler(feature_range=(0, 1))
+    
+    X_scaled = feature_scaler.fit_transform(X)
+    y_scaled = target_scaler.fit_transform(y.values.reshape(-1, 1)).flatten()
+    
+    # Store feature names for later use
+    feature_scaler.feature_names = X.columns.tolist()
+    
+    # Create sequences for LSTM
+    X_seq, y_seq = create_sequences(X_scaled, y_scaled, seq_length)
+    
+    print(f"LSTM sequence shape: {X_seq.shape}")
+    
+    # Split data into training and testing sets
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_seq, y_seq, test_size=test_size, shuffle=False
+    )
+    
+    # Define LSTM architecture
     model = Sequential([
-        LSTM(units, activation='relu', return_sequences=True, input_shape=(seq_length, n_features)),
-        Dropout(dropout_rate),
-        LSTM(units, activation='relu'),
-        Dropout(dropout_rate),
+        LSTM(50, activation='relu', return_sequences=True, 
+             input_shape=(X_train.shape[1], X_train.shape[2])),
+        Dropout(0.2),
+        LSTM(50, activation='relu'),
+        Dropout(0.2),
         Dense(1)
     ])
-
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
-
-    early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-
-    print(f"Training LSTM with {len(X_train_seq)} samples...")
+    
+    # Compile the model
+    model.compile(optimizer='adam', loss='mse')
+    
+    # Train the model with early stopping
+    early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    
     history = model.fit(
-        X_train_seq, y_train_seq,
-        epochs=epochs,
-        batch_size=batch_size,
-        validation_split=0.1, # Use part of training data for validation
-        callbacks=[early_stopping],
-        verbose=1 # Set to 1 or 2 for progress, 0 for silent
+        X_train, y_train,
+        epochs=100,
+        batch_size=32,
+        validation_split=0.1,
+        callbacks=[early_stop],
+        verbose=1
     )
-
-    # --- Evaluate on Test Set ---
-    print("Evaluating LSTM on test set...")
-    y_pred_scaled = model.predict(X_test_seq).flatten()
-
-    # Inverse transform to original scale
-    y_test_orig = target_scaler.inverse_transform(y_test_seq.reshape(-1, 1)).flatten()
-    y_pred_orig = target_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
-
-    # Calculate Test Metrics
-    test_mse = mean_squared_error(y_test_orig, y_pred_orig)
-    test_rmse = np.sqrt(test_mse)
-    test_mae = mean_absolute_error(y_test_orig, y_pred_orig)
-    test_r2 = r2_score(y_test_orig, y_pred_orig)
-    test_mape = np.mean(np.abs((y_test_orig - y_pred_orig) / y_test_orig)) * 100 if np.all(y_test_orig != 0) else np.inf
-
-    test_metrics = {'mse': test_mse, 'rmse': test_rmse, 'mae': test_mae, 'r2': test_r2, 'mape': test_mape}
-
-    # --- Get Training and Validation Metrics from History ---
-    train_loss = history.history['loss'][-1]
-    val_loss = history.history['val_loss'][-1]
-    train_mae_scaled = history.history.get('mae', [np.nan])[-1]
-    val_mae_scaled = history.history.get('val_mae', [np.nan])[-1]
-
-    train_metrics = {'scaled_loss': train_loss, 'scaled_mae': train_mae_scaled}
-    validation_metrics = {'scaled_loss': val_loss, 'scaled_mae': val_mae_scaled}
-
-    print("LSTM Training and Evaluation Complete.")
+    
+    # Evaluate the model
+    y_pred = model.predict(X_test).flatten()
+    
+    # Calculate metrics on scaled data
+    mse = mean_squared_error(y_test, y_pred)
+    mae = mean_absolute_error(y_test, y_pred)
+    
+    # Convert predictions back to original scale for interpretable metrics
+    y_test_orig = target_scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
+    y_pred_orig = target_scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
+    
+    mse_orig = mean_squared_error(y_test_orig, y_pred_orig)
+    rmse_orig = np.sqrt(mse_orig)
+    mae_orig = mean_absolute_error(y_test_orig, y_pred_orig)
+    r2 = r2_score(y_test_orig, y_pred_orig)
+    
+    # Calculate MAPE
+    mape = np.mean(np.abs((y_test_orig - y_pred_orig) / y_test_orig)) * 100
+    
+    # Print evaluation metrics
+    print(f"LSTM Model Metrics:")
+    print(f"  MSE: {mse_orig:.4f}")
+    print(f"  RMSE: {rmse_orig:.4f}")
+    print(f"  MAE: {mae_orig:.4f}")
+    print(f"  R²: {r2:.4f}")
+    print(f"  MAPE: {mape:.2f}%")
+    
+    # Results dataframe
+    results_df = pd.DataFrame({
+        'actual': y_test_orig,
+        'predicted': y_pred_orig,
+        'error': y_test_orig - y_pred_orig,
+        'error_pct': ((y_test_orig - y_pred_orig) / y_test_orig) * 100
+    })
+    
     return {
         'model': model,
-        'test_metrics': test_metrics,
-        'train_metrics': train_metrics, # Scaled metrics from history
-        'validation_metrics': validation_metrics, # Scaled metrics from history
-        'history': history.history,
-        'predictions_test': y_pred_orig, # Store original scale predictions
-        'actual_test': y_test_orig      # Store original scale actuals
+        'feature_scaler': feature_scaler,
+        'target_scaler': target_scaler,
+        'seq_length': seq_length,
+        'feature_names': X.columns.tolist(),
+        'metrics': {
+            'mse': mse_orig,
+            'rmse': rmse_orig,
+            'mae': mae_orig,
+            'r2': r2,
+            'mape': mape
+        },
+        'results': results_df,
+        'history': history.history
     }
 
-def predict_with_lstm(lstm_results, historical_data, days=5):
+def predict_with_lstm(model_results, features_df, days=5):
     """
-    Make future predictions using a trained LSTM model.
-
+    Make predictions using the trained LSTM model
+    
     Args:
-        lstm_results (dict): Dictionary containing the trained LSTM model,
-                             scalers ('feature', 'target'), and seq_length.
-        historical_data (pd.DataFrame): DataFrame with historical features.
-        days (int): Number of future days to predict.
-
+        model_results: Dictionary with trained LSTM model and scalers
+        features_df: DataFrame with the most recent data
+        days: Number of days to predict
+        
     Returns:
-        pd.DataFrame: DataFrame with future dates and predicted prices.
+        DataFrame with predictions
     """
-    model = lstm_results['model']
-    feature_scaler = lstm_results['feature_scaler']
-    target_scaler = lstm_results['target_scaler']
-    seq_length = lstm_results['seq_length']
+    # Extract model components
+    model = model_results['model']
+    feature_scaler = model_results['feature_scaler']
+    target_scaler = model_results['target_scaler']
+    seq_length = model_results['seq_length']
+    feature_names = model_results['feature_names']
+    
+    # Ensure we have the right features
+    features = features_df[feature_names].copy()
+    
+    # Get the most recent sequence
+    latest_data = features.iloc[-seq_length:].copy()
+    
+    # Scale the features
+    scaled_data = feature_scaler.transform(latest_data)
+    
+    # Store predictions
+    predictions = []
+    dates = []
+    last_date = features.index[-1]
+    
+    # Create a copy of the scaled data to update during prediction
+    prediction_sequence = scaled_data.copy()
+    
+    # Make predictions for each future day
+    for i in range(days):
+        # Reshape for LSTM input [samples, time steps, features]
+        seq_reshape = prediction_sequence.reshape(1, seq_length, len(feature_names))
+        
+        # Predict
+        scaled_pred = model.predict(seq_reshape)[0][0]
+        
+        # Convert back to original scale
+        prediction = target_scaler.inverse_transform([[scaled_pred]])[0][0]
+        
+        # Calculate next date
+        future_date = last_date + pd.Timedelta(days=i+1)
+        dates.append(future_date)
+        predictions.append(prediction)
+        
+        # Update the sequence for next prediction:
+        # First, create a new row based on the last available data
+        new_features = features.iloc[-1].copy()
+        
+        # Update price-related columns with the prediction - Remove random noise
+        new_features['close'] = prediction
+        prev_close = features.iloc[-1]['close']
+        new_features['open'] = prev_close * 1.001 if prediction > prev_close else prev_close * 0.999
+        new_features['high'] = max(prediction, new_features['open']) * 1.01
+        new_features['low'] = min(prediction, new_features['open']) * 0.99
+        
+        # Ensure high >= open/close and low <= open/close
+        new_features['high'] = max(new_features['high'], new_features['close'], new_features['open'])
+        new_features['low'] = min(new_features['low'], new_features['close'], new_features['open'])
 
-    # Get feature names from the scaler
-    if hasattr(feature_scaler, 'feature_names_in_'):
-        features = feature_scaler.feature_names_in_
-    elif hasattr(feature_scaler, 'feature_names'): # Fallback if using older sklearn?
-         features = feature_scaler.feature_names
-    else:
-        # If scaler has no feature names, try getting from historical_data, excluding 'target' if present
-        features = [col for col in historical_data.columns if col != 'target']
-        print("Warning: Feature names not found on scaler, inferring from historical_data.")
-
-    # Use the last 'seq_length' days from historical data as the starting sequence
-    last_sequence_df = historical_data.iloc[-seq_length:][features]
-
-    # Ensure columns match the order expected by the scaler
-    last_sequence_df = last_sequence_df[features]
-
-    current_sequence_scaled = feature_scaler.transform(last_sequence_df)
-
-    predictions_scaled = []
-
-    for _ in range(days):
-        # Reshape sequence for prediction: (1, seq_length, n_features)
-        input_sequence = current_sequence_scaled.reshape(1, seq_length, len(features))
-
-        # Predict the next step (scaled)
-        next_pred_scaled = model.predict(input_sequence)[0][0]
-        predictions_scaled.append(next_pred_scaled)
-
-        # Update the sequence: drop the first step, append the prediction
-        try:
-            # Find index of 'close' or similar target base column if possible
-            target_base_col = 'close' # Assume 'close' was the base for the target
-            target_idx = list(features).index(target_base_col)
-            new_step_scaled = current_sequence_scaled[-1].copy()
-            new_step_placeholder = np.append(current_sequence_scaled[-1, 1:], next_pred_scaled)
-
-            # Roll the sequence and append the new step placeholder
-            current_sequence_scaled = np.vstack((current_sequence_scaled[1:], new_step_placeholder.reshape(1, -1)))
-
-        except ValueError:
-             print("Warning: Cannot find target base column ('close') in features for sequence update.")
-             current_sequence_scaled = np.vstack((current_sequence_scaled[1:], current_sequence_scaled[-1].reshape(1, -1)))
-
-    # Inverse transform the predictions
-    predictions = target_scaler.inverse_transform(np.array(predictions_scaled).reshape(-1, 1)).flatten()
-
-    # Create future dates
-    last_date = historical_data.index[-1]
-    future_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=days)
-
+        # Update technical indicators based on the new predicted price
+        if 'ma5' in feature_names:
+            ma5_values = list(features.iloc[-4:]['close'].values) + [prediction]
+            new_features['ma5'] = sum(ma5_values) / 5
+            
+        if 'ma7' in feature_names:
+            ma7_values = list(features.iloc[-6:]['close'].values) + [prediction]
+            new_features['ma7'] = sum(ma7_values) / min(7, len(ma7_values))
+            
+        if 'ma14' in feature_names:
+            ma14_values = list(features.iloc[-13:]['close'].values) + [prediction]
+            new_features['ma14'] = sum(ma14_values) / min(14, len(ma14_values))
+            
+        if 'ema5' in feature_names:
+            alpha = 2 / (5 + 1)
+            new_features['ema5'] = (prediction * alpha) + (features.iloc[-1]['ema5'] * (1 - alpha))
+            
+        if 'ema14' in feature_names:
+            alpha = 2 / (14 + 1)
+            new_features['ema14'] = (prediction * alpha) + (features.iloc[-1]['ema14'] * (1 - alpha))
+        
+        if 'price_change_1d' in feature_names:
+            new_features['price_change_1d'] = (prediction / features.iloc[-1]['close']) - 1
+            
+        if 'price_change_3d' in feature_names:
+            if len(features) >= 3:
+                new_features['price_change_3d'] = (prediction / features.iloc[-3]['close']) - 1
+        
+        if 'price_change_7d' in feature_names:
+            if len(features) >= 7:
+                new_features['price_change_7d'] = (prediction / features.iloc[-7]['close']) - 1
+                
+        if 'volatility_5d' in feature_names:
+            vol_values = list(features.iloc[-4:]['close'].values) + [prediction]
+            new_features['volatility_5d'] = np.std(vol_values)
+            
+        if 'volatility_ratio' in feature_names:
+            vol_values = list(features.iloc[-4:]['close'].values) + [prediction]
+            volatility = np.std(vol_values)
+            new_features['volatility_ratio'] = volatility / prediction if prediction != 0 else 0
+            
+        if 'ma_crossover' in feature_names and 'ma5' in new_features and 'ma14' in new_features:
+            new_features['ma_crossover'] = int(new_features['ma5'] > new_features['ma14'])
+            
+        if 'bb_upper' in feature_names and 'ma14' in new_features:
+            std_20 = np.std(list(features.iloc[-19:]['close'].values) + [prediction])
+            new_features['bb_upper'] = new_features['ma14'] + (std_20 * 2)
+            
+        if 'bb_lower' in feature_names and 'ma14' in new_features:
+            std_20 = np.std(list(features.iloc[-19:]['close'].values) + [prediction])
+            new_features['bb_lower'] = new_features['ma14'] - (std_20 * 2)
+            
+        if 'bb_width' in feature_names and 'bb_upper' in new_features and 'bb_lower' in new_features and 'ma14' in new_features:
+            new_features['bb_width'] = (new_features['bb_upper'] - new_features['bb_lower']) / new_features['ma14'] if new_features['ma14'] != 0 else 0
+            
+        if 'rsi' in feature_names and len(features) >= 14:
+            deltas = list(features.iloc[-14:]['close'].diff().dropna().values)
+            deltas.append(prediction - features.iloc[-1]['close'])
+            gains = [max(d, 0) for d in deltas]
+            losses = [abs(min(d, 0)) for d in deltas]
+            avg_gain = sum(gains) / 14
+            avg_loss = sum(losses) / 14
+            if avg_loss == 0:
+                new_features['rsi'] = 100
+            else:
+                rs = avg_gain / avg_loss
+                new_features['rsi'] = 100 - (100 / (1 + rs))
+                
+        if 'momentum' in feature_names:
+            new_features['momentum'] = prediction - features.iloc[-5]['close'] if len(features) >= 5 else 0
+        
+        # Carry forward other features like fear_greed_index and sentiment metrics
+        for col in feature_names:
+            if col not in new_features or pd.isna(new_features[col]):
+                new_features[col] = features.iloc[-1][col]
+        
+        # Scale the new row - Ensure feature names are used
+        new_scaled = feature_scaler.transform(pd.DataFrame([new_features.values], columns=feature_names))[0]
+        
+        # Remove first row and append the new one to the sequence
+        prediction_sequence = np.vstack([prediction_sequence[1:], new_scaled])
+        
+        # Add the new features to our features dataframe for the next iteration
+        features.loc[future_date] = new_features
+    
     # Create prediction DataFrame
-    prediction_df = pd.DataFrame({'predicted_price': predictions}, index=future_dates)
-    prediction_df.index.name = 'date'
-
+    prediction_df = pd.DataFrame({
+        'date': dates,
+        'predicted_price': predictions
+    })
+    prediction_df.set_index('date', inplace=True)
+    
     return prediction_df
