@@ -16,21 +16,21 @@ def create_sequences(X, y, seq_length):
     
     return np.array(X_seq), np.array(y_seq)
 
-def train_lstm_model(features_df, target_column='close', forecast_days=5, test_size=0.2, seq_length=10):
+def train_lstm_model(features_df, target_column='close', forecast_days=1, test_size=0.2, seq_length=10):
     """
-    Train an LSTM model for price prediction
+    Train an LSTM model for price prediction (typically trained for 1-step ahead prediction)
     
     Args:
         features_df: DataFrame with engineered features
         target_column: Column to predict
-        forecast_days: Number of days ahead to predict
+        forecast_days: Number of days ahead the target variable represents (usually 1 for iterative prediction)
         test_size: Proportion of data for testing
         seq_length: Length of input sequences for LSTM
         
     Returns:
         Dictionary with model, scalers, and evaluation results
     """
-    print("\nTraining LSTM model...")
+    print(f"\nTraining LSTM model (target shifted by {forecast_days} day(s))...")
     
     # Create target variable (shifted price)
     df = features_df.copy()
@@ -76,25 +76,26 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
     test_dates_for_lstm = original_y_seq_index[split_idx:]
     # -------------------------------------------------------------
     
-    # Define LSTM architecture
+    # Define LSTM architecture - Adjusted
     model = Sequential([
-        LSTM(50, activation='relu', return_sequences=True, 
+        LSTM(100, activation='tanh', return_sequences=True, 
              input_shape=(X_train.shape[1], X_train.shape[2])),
-        Dropout(0.2),
-        LSTM(50, activation='relu'),
-        Dropout(0.2),
+        Dropout(0.3),
+        LSTM(50, activation='tanh', return_sequences=False),
+        Dropout(0.3),
+        Dense(25, activation='relu'),
         Dense(1)
     ])
     
     # Compile the model
     model.compile(optimizer='adam', loss='mse')
     
-    # Train the model with early stopping
-    early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+    # Train the model with early stopping - Increased patience
+    early_stop = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True)
     
     history = model.fit(
         X_train, y_train,
-        epochs=100,
+        epochs=150,
         batch_size=32,
         validation_split=0.1,
         callbacks=[early_stop],
@@ -115,7 +116,6 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
     # --- Ensure the length of dates matches the predictions ---
     if len(test_dates_for_lstm) != len(y_test_orig):
         print(f"Warning: Length mismatch between LSTM test dates ({len(test_dates_for_lstm)}) and predictions ({len(y_test_orig)}). Adjusting dates.")
-        # Adjust index length if necessary (e.g., if split wasn't exact or edge cases)
         test_dates_for_lstm = test_dates_for_lstm[:len(y_test_orig)]
     # ---------------------------------------------------------
 
@@ -141,7 +141,7 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
         'predicted': y_pred_orig,
         'error': y_test_orig - y_pred_orig,
         'error_pct': ((y_test_orig - y_pred_orig) / y_test_orig) * 100
-    }, index=test_dates_for_lstm) # Assign the correct DatetimeIndex
+    }, index=test_dates_for_lstm)
     
     return {
         'model': model,
