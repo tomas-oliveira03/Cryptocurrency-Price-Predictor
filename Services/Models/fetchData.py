@@ -144,7 +144,7 @@ def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):
 
     # Fetch data from numberOfPastDaysOfData ago up to today
     startDate = datetime.now() - timedelta(days=numberOfPastDaysOfData)
-    endDate = datetime.now() # Fetch up to the current time
+    endDate = datetime.now() 
 
     print(f"Fetching data from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')}")
 
@@ -165,24 +165,26 @@ def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):
         "articles_data": articlesData
     }
 
-    # Print the number of entries in each key of datasets
-    print("Raw data summary:")
-    # Ensure data exists before calculating lengths
-    price_len = len(datasets.get("price_data", []))
-    fg_len = len(datasets.get("fear_greed_data", []))
-    total_price_data = min(price_len, fg_len) if price_len > 0 and fg_len > 0 else 0
 
-    data_count = sum(len(datasets[key]) for key in ["reddit_data", "forum_data", "articles_data"] if key in datasets and datasets[key] is not None)
+    # # Debugging information
+    # # Print the number of entries in each key of datasets
+    # print("Raw data summary:")
+    # # Ensure data exists before calculating lengths
+    # price_len = len(datasets.get("price_data", []))
+    # fg_len = len(datasets.get("fear_greed_data", []))
+    # total_price_data = min(price_len, fg_len) if price_len > 0 and fg_len > 0 else 0
 
-    for key, value in datasets.items():
-        if isinstance(value, pd.DataFrame):
-            print(f"  {key}: {len(value)} entries")
-        elif hasattr(value, '__len__'):
-             print(f"  {key}: {len(value)} entries")
-        else:
-            print(f"  {key}: N/A entries")
+    # data_count = sum(len(datasets[key]) for key in ["reddit_data", "forum_data", "articles_data"] if key in datasets and datasets[key] is not None)
 
-    print(f"\nTotal price data points considered (min of price/fear-greed): {total_price_data}")
-    print(f"Total social/news data points considered: {data_count}\n")
+    # for key, value in datasets.items():
+    #     if isinstance(value, pd.DataFrame):
+    #         print(f"  {key}: {len(value)} entries")
+    #     elif hasattr(value, '__len__'):
+    #          print(f"  {key}: {len(value)} entries")
+    #     else:
+    #         print(f"  {key}: N/A entries")
+
+    # print(f"\nTotal price data points considered (min of price/fear-greed): {total_price_data}")
+    # print(f"Total social/news data points considered: {data_count}\n")
 
     return datasets

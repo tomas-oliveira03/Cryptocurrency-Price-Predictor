@@ -5,31 +5,20 @@ import numpy as np
 from bson import CodecOptions
 from pymongo import MongoClient
 import json
-import random  # Import random
-
-# Import TensorFlow if LSTM uses it
-try:
-    import tensorflow as tf
-    TENSORFLOW_AVAILABLE = True
-except ImportError:
-    TENSORFLOW_AVAILABLE = False
-    print("Warning: TensorFlow not found. LSTM reproducibility might be affected if it uses TensorFlow.")
-
+import random
+import tensorflow as tf
 import fetchData
 import preProcessor
 import engineFeatures
 from simplePredictionModel import visualize_predictions
-import lstmModel  # Import the LSTM module
+import lstmModel 
 
-# --- Seed Setting Function ---
 def set_seeds(seed=42):
     os.environ['PYTHONHASHSEED'] = str(seed)
     random.seed(seed)
     np.random.seed(seed)
-    if TENSORFLOW_AVAILABLE:
-        tf.random.set_seed(seed)
+    tf.random.set_seed(seed)
     print(f"Seeds set to {seed} for random, numpy, and tensorflow (if available).")
-# ---------------------------
 
 class PredictionModel:
     def __init__(self):
@@ -49,19 +38,17 @@ class PredictionModel:
         self.articlesDB = mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
         
 
-    def runEverything(self):
-        # --- Set Seeds for Reproducibility ---
+    def runEverything(self, cryptoCoin, forcastDays, initialFetchDays):
         set_seeds(42)
-        # ------------------------------------
+        
+        # Save raw feature data first
+        dataDir = "Services/Models/data"
+        if not os.path.exists(dataDir):
+            os.makedirs(dataDir)
 
-        # --- Configuration ---
-        crypto_coin_symbol = "BTC"
-        forecast_days = 7   # Days to predict into the future
-        initial_fetch_days = 365 * 2 # Fetch ample history initially (e.g., 2 years)
-        # -------------------
 
         # Step 1: Get raw data for prediction
-        rawData = fetchData.getDataForPrediction(self, cryptoCoin=crypto_coin_symbol, numberOfPastDaysOfData=initial_fetch_days)
+        rawData = fetchData.getDataForPrediction(self, cryptoCoin=cryptoCoin, numberOfPastDaysOfData=initialFetchDays)
         
         # Step 2: Preprocess the data
         processedData = preProcessor.preprocessData(self, rawData)
@@ -69,26 +56,8 @@ class PredictionModel:
         # Step 3: Engineer features
         featuresDF = engineFeatures.engineFeatures(self, processedData)
         
-        # Print feature summary
-        print("\nEngineered Features Summary:")
-        print(f"Total features: {len(featuresDF.columns)}")
-        print(f"Total data points: {len(featuresDF)}")
-        print("Feature names:", ", ".join(featuresDF.columns.tolist()[:5]) + "...")
-        
-        # Save raw feature data first
-        csv_dir = "Services/Models/data"
-        if not os.path.exists(csv_dir):
-            os.makedirs(csv_dir)
-        
-        features_csv = f"{csv_dir}/raw_features.csv"
-        featuresDF.to_csv(features_csv)
-        print(f"Raw features saved to {features_csv}")
-        
         # Step 4: Train LSTM model (Initial training)
         print("\n--- Training Initial LSTM Model ---")
-        # --- Set seeds again before LSTM training ---
-        set_seeds(42)
-        # ------------------------------------------
         
         # Use a smaller sequence length if dataset is smaller
         seq_length = min(10, len(featuresDF) // 5)  # Adjust sequence length based on data size
@@ -106,11 +75,11 @@ class PredictionModel:
         for metric, value in lstm_results['metrics'].items():
             print(f"  {metric.upper()}: {value:.4f}")
             
+            
+            
+            
         # Step 5: Retrain LSTM on full dataset for final model
         print("\n--- Retraining LSTM Model on Full Historical Data ---")
-        # --- Set seeds again before final LSTM training ---
-        set_seeds(42)
-        # ------------------------------------------------
         
         # Retrain LSTM on the entire dataset
         retrain_seq_length = min(10, len(featuresDF) // 10)
@@ -126,12 +95,12 @@ class PredictionModel:
         print("LSTM retrained successfully on full data.")
 
         # Step 6: Predict Future with LSTM
-        print(f"\n--- Predicting Next {forecast_days} Days using LSTM Model ---")
+        print(f"\n--- Predicting Next {forcastDays} Days using LSTM Model ---")
 
         future_predictions = lstmModel.predict_with_lstm(
             final_lstm_model,
             featuresDF,
-            days=forecast_days
+            days=forcastDays
         )
 
         # Step 7: Output Results
@@ -145,7 +114,7 @@ class PredictionModel:
             first_pred = future_predictions['predicted_price'].iloc[0]
             last_pred = future_predictions['predicted_price'].iloc[-1]
             total_change_pct = ((last_pred - first_pred) / first_pred) * 100 if first_pred != 0 else 0
-            print(f"\nOverall {forecast_days}-day prediction trend: {total_change_pct:+.2f}%")
+            print(f"\nOverall {forcastDays}-day prediction trend: {total_change_pct:+.2f}%")
         else:
             print("  No future predictions were generated.")
 
@@ -158,17 +127,17 @@ class PredictionModel:
             featuresDF[['close']],
             future_predictions,
             sentiment_data=sentiment_plot_data,
-            save_path=f"{csv_dir}/crypto_price_prediction_lstm_{forecast_days}d.png"
+            save_path=f"{dataDir}/crypto_price_prediction_lstm_{forcastDays}d.png"
         )
 
         # Save predictions to CSV
-        predictions_csv = f"{csv_dir}/price_predictions_lstm_{forecast_days}d.csv"
+        predictions_csv = f"{dataDir}/price_predictions_lstm_{forcastDays}d.csv"
         future_predictions.to_csv(predictions_csv)
         print(f"Final predictions saved to {predictions_csv}")
 
         # Generate and save JSON data export
         print("\nGenerating JSON data export...")
-        json_export_path = os.path.join(csv_dir, f"{crypto_coin_symbol}_data_export_lstm_{forecast_days}d.json")
+        json_export_path = os.path.join(dataDir, f"{cryptoCoin}_data_export_lstm_{forcastDays}d.json")
 
         historical_price_data = [
             {"date": date.strftime('%Y-%m-%d'), "price": price}
@@ -188,7 +157,7 @@ class PredictionModel:
             ]
 
         json_data = {
-            "coin": crypto_coin_symbol,
+            "coin": cryptoCoin,
             "historical_price": historical_price_data,
             "predicted_price": predicted_price_data,
             "positive_sentiment_ratio": positive_sentiment_data
@@ -204,20 +173,28 @@ class PredictionModel:
             "lstm_results": final_lstm_model,
             "predictions": future_predictions,
             "json_export_path": json_export_path,
-            "forecast_days": forecast_days
+            "forcastDays": forcastDays
         }
             
         return results_dict
 
+
 if __name__ == "__main__":
-    # Example usage
     try:
         predictionModel = PredictionModel()
-        results = predictionModel.runEverything()
+        
+        # --- Configuration ---
+        cryptoCoin = "BTC"
+        forcastDays = 7   # Days to predict into the future
+        initialFetchDays = 365 * 2 # Fetch ample history initially (e.g., 2 years)
+        # -------------------
+        
+        results = predictionModel.runEverything(cryptoCoin, forcastDays, initialFetchDays)
+        
         print("\n--- Final Results Summary ---")
 
         # Access config values from the results dictionary
-        fc_days = results.get('forecast_days', 'N/A')
+        fc_days = results.get('forcastDays', 'N/A')
 
         print(f"Model used: LSTM")
         print("LSTM Model Metrics:")
