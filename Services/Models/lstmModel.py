@@ -43,6 +43,10 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
     X = df.drop('target', axis=1)
     y = df['target']
     
+    # --- Store original index before scaling ---
+    original_index = df.index
+    # -----------------------------------------
+    
     # Use MinMaxScaler instead of StandardScaler
     feature_scaler = MinMaxScaler(feature_range=(0, 1))
     target_scaler = MinMaxScaler(feature_range=(0, 1))
@@ -62,6 +66,15 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
     X_train, X_test, y_train, y_test = train_test_split(
         X_seq, y_seq, test_size=test_size, shuffle=False
     )
+    
+    # --- Determine the correct dates for the y_test predictions ---
+    # The original index corresponding to y_seq starts seq_length steps into the data
+    original_y_seq_index = original_index[seq_length:]
+    # The test part of this index corresponds to y_test
+    # Calculate the split point index based on the sequence length
+    split_idx = len(X_seq) - len(X_test)
+    test_dates_for_lstm = original_y_seq_index[split_idx:]
+    # -------------------------------------------------------------
     
     # Define LSTM architecture
     model = Sequential([
@@ -99,6 +112,13 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
     y_test_orig = target_scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
     y_pred_orig = target_scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
     
+    # --- Ensure the length of dates matches the predictions ---
+    if len(test_dates_for_lstm) != len(y_test_orig):
+        print(f"Warning: Length mismatch between LSTM test dates ({len(test_dates_for_lstm)}) and predictions ({len(y_test_orig)}). Adjusting dates.")
+        # Adjust index length if necessary (e.g., if split wasn't exact or edge cases)
+        test_dates_for_lstm = test_dates_for_lstm[:len(y_test_orig)]
+    # ---------------------------------------------------------
+
     mse_orig = mean_squared_error(y_test_orig, y_pred_orig)
     rmse_orig = np.sqrt(mse_orig)
     mae_orig = mean_absolute_error(y_test_orig, y_pred_orig)
@@ -115,13 +135,13 @@ def train_lstm_model(features_df, target_column='close', forecast_days=5, test_s
     print(f"  R²: {r2:.4f}")
     print(f"  MAPE: {mape:.2f}%")
     
-    # Results dataframe
+    # Results dataframe with correct index
     results_df = pd.DataFrame({
         'actual': y_test_orig,
         'predicted': y_pred_orig,
         'error': y_test_orig - y_pred_orig,
         'error_pct': ((y_test_orig - y_pred_orig) / y_test_orig) * 100
-    })
+    }, index=test_dates_for_lstm) # Assign the correct DatetimeIndex
     
     return {
         'model': model,
