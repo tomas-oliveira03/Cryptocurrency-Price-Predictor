@@ -59,8 +59,6 @@ def getCryptoPriceData(self, startDate=None, endDate=None, cryptoSymbol=None):
     return results
 
 
-
-
 def getRedditData(self, startDate=None, endDate=None, cryptoSymbol=None):
     query = {}
 
@@ -142,23 +140,22 @@ def getArticlesData(self, startDate=None, endDate=None, cryptoSymbol=None):
     return results
 
 
+def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):
 
-
-
-
-def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):       
-
+    # Fetch data from numberOfPastDaysOfData ago up to today
     startDate = datetime.now() - timedelta(days=numberOfPastDaysOfData)
-    endDate = datetime.now() - timedelta(days=5)
-    
-    # Get data from all sources
-    cryptoData = getCryptoPriceData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
-    fearGreedData = getFearGreedData(self, startDate=startDate)
-    
+    endDate = datetime.now() # Fetch up to the current time
+
+    print(f"Fetching data from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')}")
+
+    # Get data from all sources using the date range
+    cryptoData = getCryptoPriceData(self, startDate=startDate, endDate=endDate, cryptoSymbol=cryptoCoin)
+    fearGreedData = getFearGreedData(self, startDate=startDate, endDate=endDate)
+
     # Get social media data related to this cryptocurrency
-    redditData = getRedditData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
-    forumData = getForumData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
-    articlesData = getArticlesData(self, startDate=startDate, cryptoSymbol=cryptoCoin)
+    redditData = getRedditData(self, startDate=startDate, endDate=endDate, cryptoSymbol=cryptoCoin)
+    forumData = getForumData(self, startDate=startDate, endDate=endDate, cryptoSymbol=cryptoCoin)
+    articlesData = getArticlesData(self, startDate=startDate, endDate=endDate, cryptoSymbol=cryptoCoin)
 
     datasets = {
         "price_data": cryptoData,
@@ -167,23 +164,25 @@ def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):
         "forum_data": forumData,
         "articles_data": articlesData
     }
-    
-    
-    
+
     # Print the number of entries in each key of datasets
     print("Raw data summary:")
-    total_price_data = min(len(datasets.get("price_data", [])), len(datasets.get("fear_greed_data", [])))
+    # Ensure data exists before calculating lengths
+    price_len = len(datasets.get("price_data", []))
+    fg_len = len(datasets.get("fear_greed_data", []))
+    total_price_data = min(price_len, fg_len) if price_len > 0 and fg_len > 0 else 0
+
     data_count = sum(len(datasets[key]) for key in ["reddit_data", "forum_data", "articles_data"] if key in datasets and datasets[key] is not None)
-    
+
     for key, value in datasets.items():
         if isinstance(value, pd.DataFrame):
             print(f"  {key}: {len(value)} entries")
+        elif hasattr(value, '__len__'):
+             print(f"  {key}: {len(value)} entries")
         else:
-            print(f"  {key}: {len(value) if hasattr(value, '__len__') else 'N/A'} entries")
-    
-    print(f"\nTotal price data (min of price_data and fear_greed_data): {total_price_data}")
-    print(f"Data count (sum of reddit, forum, and articles): {data_count}\n")
-    
-        
+            print(f"  {key}: N/A entries")
+
+    print(f"\nTotal price data points considered (min of price/fear-greed): {total_price_data}")
+    print(f"Total social/news data points considered: {data_count}\n")
 
     return datasets

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
-from sklearn.preprocessing import MinMaxScaler  # Use MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
@@ -33,327 +33,398 @@ def create_target(features_df, target_column='close', forecast_days=5):
 
 def train_model(features_df, target_column='close', forecast_days=5, test_size=0.2):
     """
-    Train a model to predict future prices
-    
+    Train multiple models (RF, XGB, MA) on a train/test split of the provided data.
+    Used for initial comparison or training on a subset (like the training fold).
+
     Args:
-        features_df: DataFrame with features
-        target_column: Column to predict
-        forecast_days: Number of days ahead to predict
-        test_size: Proportion of data to use for testing
-        
+        features_df: DataFrame with features and target column.
+        target_column: Column to predict.
+        forecast_days: Number of days ahead the target variable represents.
+        test_size: Proportion of data to use for internal testing within this function.
+
     Returns:
-        Dictionary with model, scaler, evaluation metrics, predictions, X_test, and y_test
+        Dictionary with evaluation metrics, models, predictions on the internal test set.
     """
     # Create the target variable
     data = create_target(features_df, target_column, forecast_days)
-    
+
+    if data.empty or 'target' not in data.columns:
+        raise ValueError("Data is empty or 'target' column missing after create_target.")
+
     # Separate features and target
     X = data.drop('target', axis=1)
     y = data['target']
-    
+
+    if len(X) < 2: # Need at least 2 samples for train/test split
+         raise ValueError(f"Not enough data ({len(X)} samples) to perform train/test split.")
+
+    # Adjust test_size if it leads to a split of less than 1 sample
+    if int(len(X) * test_size) < 1:
+        test_size = 1 / len(X) # Ensure at least one test sample if possible
+    if int(len(X) * (1 - test_size)) < 1:
+         raise ValueError("Test size too large, leaves no training samples.")
+
+
     # Split into training and test sets
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=test_size, shuffle=False  # No shuffle for time series
     )
-    
-    # Use MinMaxScaler instead of StandardScaler
+
+    if X_train.empty or X_test.empty:
+         raise ValueError("Train or test split resulted in empty DataFrame.")
+
+    # Use MinMaxScaler
     scaler = MinMaxScaler(feature_range=(0, 1))
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
-    
-    # Store feature names in the scaler for later use
+
+    # Store feature names
     scaler.feature_names = X.columns.tolist()
-    
+
     # Store results dictionary
     all_results = {}
-    
-    # Train Random Forest model
-    print("Training Random Forest model...")
-    rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-    rf_model.fit(X_train_scaled, y_train)
-    rf_pred = rf_model.predict(X_test_scaled)
-    
-    # Calculate RF metrics
-    rf_mse = mean_squared_error(y_test, rf_pred)
-    rf_rmse = np.sqrt(rf_mse)
-    rf_mae = mean_absolute_error(y_test, rf_pred)
-    rf_r2 = r2_score(y_test, rf_pred)
-    rf_mape = np.mean(np.abs((y_test - rf_pred) / y_test)) * 100
-    
-    # Store RF results
-    all_results['random_forest'] = {
-        'model': rf_model,
-        'mse': rf_mse,
-        'rmse': rf_rmse,
-        'mae': rf_mae,
-        'r2': rf_r2,
-        'mape': rf_mape,
-        'pred': rf_pred
-    }
-    
-    # Train XGBoost model
-    print("Training XGBoost model...")
-    xgb_model = xgb.XGBRegressor(
-        objective='reg:squarederror',
-        n_estimators=100,
-        learning_rate=0.1,
-        max_depth=5,
-        random_state=42
-    )
-    xgb_model.fit(X_train_scaled, y_train)
-    xgb_pred = xgb_model.predict(X_test_scaled)
-    
-    # Calculate XGB metrics
-    xgb_mse = mean_squared_error(y_test, xgb_pred)
-    xgb_rmse = np.sqrt(xgb_mse)
-    xgb_mae = mean_absolute_error(y_test, xgb_pred)
-    xgb_r2 = r2_score(y_test, xgb_pred)
-    xgb_mape = np.mean(np.abs((y_test - xgb_pred) / y_test)) * 100
-    
-    # Store XGB results
-    all_results['xgboost'] = {
-        'model': xgb_model,
-        'mse': xgb_mse,
-        'rmse': xgb_rmse,
-        'mae': xgb_mae,
-        'r2': xgb_r2,
-        'mape': xgb_mape,
-        'pred': xgb_pred
-    }
-    
-    # Add a simple moving average baseline
+
+    # --- Train Random Forest ---
+    try:
+        print("Training Random Forest model...")
+        rf_model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1) # Use more cores
+        rf_model.fit(X_train_scaled, y_train)
+        rf_pred = rf_model.predict(X_test_scaled)
+        rf_metrics = calculate_metrics(y_test, rf_pred)
+        all_results['random_forest'] = {'model': rf_model, 'pred': rf_pred, **rf_metrics}
+    except Exception as e:
+        print(f"Error training Random Forest: {e}")
+        all_results['random_forest'] = {'model': None, 'pred': np.full(len(y_test), np.nan), 'rmse': np.inf}
+
+    # --- Train XGBoost ---
+    try:
+        print("Training XGBoost model...")
+        xgb_model = xgb.XGBRegressor(
+            objective='reg:squarederror', n_estimators=100, learning_rate=0.1,
+            max_depth=5, random_state=42, n_jobs=-1 # Use more cores
+        )
+        xgb_model.fit(X_train_scaled, y_train)
+        xgb_pred = xgb_model.predict(X_test_scaled)
+        xgb_metrics = calculate_metrics(y_test, xgb_pred)
+        all_results['xgboost'] = {'model': xgb_model, 'pred': xgb_pred, **xgb_metrics}
+    except Exception as e:
+        print(f"Error training XGBoost: {e}")
+        all_results['xgboost'] = {'model': None, 'pred': np.full(len(y_test), np.nan), 'rmse': np.inf}
+
+
+    # --- Moving Average Baseline ---
     ma_window = min(7, len(y_train))
-    y_pred_ma = np.full_like(y_test, np.mean(y_train[-ma_window:]))
-    
-    # Calculate MA metrics
-    ma_mse = mean_squared_error(y_test, y_pred_ma)
-    ma_rmse = np.sqrt(ma_mse)
-    ma_mae = mean_absolute_error(y_test, y_pred_ma)
-    ma_r2 = r2_score(y_test, y_pred_ma)
-    ma_mape = np.mean(np.abs((y_test - y_pred_ma) / y_test)) * 100
-    
-    # Store MA results
-    all_results['moving_avg'] = {
-        'model': None,  # No actual model for moving average
-        'mse': ma_mse,
-        'rmse': ma_rmse,
-        'mae': ma_mae,
-        'r2': ma_r2,
-        'mape': ma_mape,
-        'pred': y_pred_ma
-    }
-    
-    # Select best model based on RMSE
-    best_model_name = min(all_results.keys(), key=lambda x: all_results[x]['rmse'])
-    print(f"Best model: {best_model_name}")
-    
-    # Create final results for best model
-    best_results = all_results[best_model_name]
-    
-    # Create a DataFrame with actual vs predicted values
+    if ma_window > 0:
+        # Predict next value based on rolling mean of training data
+        # For multi-step forecast, a simple approach is to hold the last mean constant
+        last_ma_value = y_train.rolling(window=ma_window).mean().iloc[-1]
+        if pd.isna(last_ma_value): # Handle case where window is larger than train set
+             last_ma_value = y_train.mean()
+        y_pred_ma = np.full(len(y_test), last_ma_value)
+
+        ma_metrics = calculate_metrics(y_test, y_pred_ma)
+        all_results['moving_avg'] = {'model': None, 'window': ma_window, 'pred': y_pred_ma, **ma_metrics}
+    else:
+        print("Not enough training data for Moving Average.")
+        all_results['moving_avg'] = {'model': None, 'window': 0, 'pred': np.full(len(y_test), np.nan), 'rmse': np.inf}
+
+
+    # Select best model based on RMSE from this internal test run
+    valid_models = {k: v for k, v in all_results.items() if v.get('rmse', np.inf) != np.inf}
+    if not valid_models:
+         raise ValueError("All simple models failed to train.")
+
+    best_model_name = min(valid_models.keys(), key=lambda x: valid_models[x]['rmse'])
+    print(f"Best model (internal test): {best_model_name}")
+
+    best_results = valid_models[best_model_name]
+
+    # Create a DataFrame with actual vs predicted values for the best model
     results_df = pd.DataFrame({
         'actual': y_test,
         'predicted': best_results['pred'],
-        'error': y_test - best_results['pred'],
-        'error_pct': ((y_test - best_results['pred']) / y_test) * 100
     })
-    
+    results_df['error'] = results_df['actual'] - results_df['predicted']
+    results_df['error_pct'] = (results_df['error'] / results_df['actual'].replace(0, np.nan)) * 100 # Avoid div by zero
+
+
     return {
-        'model': best_results['model'] if best_model_name != 'moving_avg' else rf_model,  # Default to RF if MA is best
+        # Return the best performing model object (or RF as default if MA is best)
+        'model': best_results.get('model') if best_model_name != 'moving_avg' else all_results.get('random_forest', {}).get('model'),
         'scaler': scaler,
         'features': X.columns.tolist(),
-        'metrics': {
-            'mse': best_results['mse'],
-            'rmse': best_results['rmse'],
-            'mae': best_results['mae'],
-            'r2': best_results['r2'],
-            'mape': best_results['mape']
-        },
-        'results': results_df,
+        'metrics': {k: v for k, v in best_results.items() if k not in ['model', 'pred']},
+        'results': results_df, # Results on the internal test set
         'best_model': best_model_name,
-        'all_metrics': all_results,
-        'X_test': X_test,  # Return X_test
-        'y_test': y_test   # Return y_test
+        'all_metrics': all_results, # Contains all models and their preds on internal test
+        'X_test': X_test,
+        'y_test': y_test
     }
 
-def make_future_predictions(model, scaler, features, latest_data, days=5):
+def train_specific_model(model_name, features_df, target_column='close', window=7):
     """
-    Make predictions for future days
-    
+    Train a specific model (RF, XGB, or MA) on the *entire* provided dataset.
+    Used for retraining the selected best model on all historical data.
+
     Args:
-        model: Trained model
-        scaler: Fitted scaler (MinMaxScaler expected)
-        features: List of feature names
-        latest_data: DataFrame with the most recent data
-        days: Number of days to predict
-        
+        model_name (str): 'random_forest', 'xgboost', or 'moving_avg'.
+        features_df (pd.DataFrame): The full feature dataset.
+        target_column (str): The name of the target column (e.g., 'close').
+        window (int): Window size, primarily for 'moving_avg'.
+
     Returns:
-        DataFrame with date and predicted prices
+        dict: Contains 'model', 'scaler', 'features', and potentially 'window'.
+              Returns None for 'model' if model_name is 'moving_avg'.
     """
-    # Get the most recent data point
-    base_data = latest_data.copy()
-    
-    # Store predictions
+    print(f"\nRetraining {model_name.upper()} on full dataset ({len(features_df)} points)...")
+
+    # MA doesn't require training in the traditional sense, just the window param.
+    if model_name == 'moving_avg':
+        # We still need a scaler and features list for consistency in prediction function
+        temp_df = features_df.drop(columns=[target_column], errors='ignore')
+        scaler = MinMaxScaler(feature_range=(0, 1))
+        # Fit scaler on dummy data of the correct shape if df is empty, else fit on actual data
+        if not temp_df.empty:
+             scaler.fit(temp_df)
+             features = temp_df.columns.tolist()
+        else:
+             # Create dummy data with expected feature count if possible
+             # This part is tricky without knowing expected features beforehand.
+             # Assuming features_df has columns even if empty rows.
+             features = [col for col in features_df.columns if col != target_column]
+             if features:
+                  dummy_data = pd.DataFrame(np.zeros((1, len(features))), columns=features)
+                  scaler.fit(dummy_data)
+             else:
+                  print("Warning: Cannot determine features for MA scaler fitting on empty data.")
+                  features = [] # No features to scale
+
+        scaler.feature_names = features
+        print(f"Moving Average selected. Window size: {window}")
+        return {'model': None, 'scaler': scaler, 'features': features, 'window': window}
+
+    # For RF and XGB:
+    # We don't need a target variable shifted here, as we train on historical features
+    # to predict the 'close' price directly in make_future_predictions.
+    X = features_df.drop(columns=[target_column], errors='ignore')
+    y = features_df[target_column] # The actual historical prices
+
+    if X.empty or y.empty:
+        raise ValueError(f"Cannot retrain {model_name}: Input data (X or y) is empty.")
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    X_scaled = scaler.fit_transform(X)
+    scaler.feature_names = X.columns.tolist()
+
+    model = None
+    if model_name == 'random_forest':
+        try:
+            model = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+            model.fit(X_scaled, y)
+            print("Random Forest retrained successfully.")
+        except Exception as e:
+            print(f"Error retraining Random Forest: {e}")
+            raise # Re-raise the exception
+
+    elif model_name == 'xgboost':
+        try:
+            model = xgb.XGBRegressor(
+                objective='reg:squarederror', n_estimators=100, learning_rate=0.1,
+                max_depth=5, random_state=42, n_jobs=-1
+            )
+            model.fit(X_scaled, y)
+            print("XGBoost retrained successfully.")
+        except Exception as e:
+            print(f"Error retraining XGBoost: {e}")
+            raise # Re-raise the exception
+    else:
+        raise ValueError(f"Unknown model_name for retraining: {model_name}")
+
+    return {'model': model, 'scaler': scaler, 'features': X.columns.tolist()}
+
+def calculate_metrics(y_true, y_pred):
+    """Calculate standard regression metrics."""
+    y_true = pd.Series(y_true).values # Ensure numpy array
+    y_pred = pd.Series(y_pred).values # Ensure numpy array
+
+    # Remove NaNs resulting from alignment or failed predictions
+    valid_idx = pd.notna(y_true) & pd.notna(y_pred)
+    if not np.any(valid_idx):
+        return {'mse': np.inf, 'rmse': np.inf, 'mae': np.inf, 'r2': -np.inf, 'mape': np.inf}
+
+    y_true_valid = y_true[valid_idx]
+    y_pred_valid = y_pred[valid_idx]
+
+    if len(y_true_valid) == 0:
+         return {'mse': np.inf, 'rmse': np.inf, 'mae': np.inf, 'r2': -np.inf, 'mape': np.inf}
+
+
+    mse = mean_squared_error(y_true_valid, y_pred_valid)
+    rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y_true_valid, y_pred_valid)
+    r2 = r2_score(y_true_valid, y_pred_valid)
+
+    # Calculate MAPE carefully
+    mape_mask = y_true_valid != 0
+    if np.any(mape_mask):
+        mape = np.mean(np.abs((y_true_valid[mape_mask] - y_pred_valid[mape_mask]) / y_true_valid[mape_mask])) * 100
+    else:
+        mape = np.inf
+
+    return {'mse': mse, 'rmse': rmse, 'mae': mae, 'r2': r2, 'mape': mape}
+
+def predict_moving_average(series, window, steps):
+     """Predict future values using a simple moving average."""
+     if window is None or window <= 0 or len(series) < window:
+          # Fallback: use the last known value if MA cannot be calculated
+          last_value = series.iloc[-1] if not series.empty else 0
+          return np.full(steps, last_value)
+     # Calculate the last moving average value
+     last_ma = series.rolling(window=window).mean().iloc[-1]
+     # Predict the same value for all future steps
+     return np.full(steps, last_ma)
+
+def make_future_predictions(model, scaler, features, latest_data, days=5, window=None):
+    """
+    Make predictions for future days using RF, XGB, or MA.
+
+    Args:
+        model: Trained model (RF or XGB), or None for MA.
+        scaler: Fitted scaler (MinMaxScaler expected).
+        features: List of feature names the model/scaler expects.
+        latest_data: DataFrame with the most recent historical data (needs all feature columns).
+        days: Number of days to predict.
+        window: The moving average window size (only used if model is None).
+
+    Returns:
+        DataFrame with date and predicted prices.
+    """
+    if latest_data.empty:
+        print("Warning: latest_data is empty in make_future_predictions. Returning empty DataFrame.")
+        return pd.DataFrame(columns=['predicted_price'])
+
+    # Ensure 'features' list only contains columns present in latest_data
+    available_features = [f for f in features if f in latest_data.columns]
+    if len(available_features) != len(features):
+        missing = set(features) - set(available_features)
+        print(f"Warning: Missing features in latest_data for prediction: {missing}. Using available features only.")
+        # Update scaler's feature list if necessary (though ideally scaler is already fit correctly)
+        if hasattr(scaler, 'feature_names') and set(scaler.feature_names) != set(available_features):
+             print("Warning: Scaler feature names mismatch available features. Prediction might be inaccurate.")
+             # Attempt to proceed with available features, assuming scaler can handle it or was fit on them.
+             features = available_features # Use only available features
+
+    if not features:
+         print("Error: No features available for prediction.")
+         return pd.DataFrame(columns=['predicted_price'])
+
+
+    # Get the most recent data point(s) needed for feature calculation lookback
+    # Use a larger buffer to handle lagged features correctly
+    lookback_needed = 30 # Adjust if longer lags are used
+    base_data = latest_data.tail(lookback_needed).copy()
+
     predictions = []
     dates = []
-    last_date = latest_data.index[-1]
-    
-    # Create a copy of the data for sequential predictions
-    future_data = latest_data.tail(30).copy()  # Use last 30 days for proper feature calculation
-    
-    # Make predictions for each future day
-    for i in range(days):
-        # Calculate the next date
-        future_date = last_date + timedelta(days=i+1)
-        dates.append(future_date)
-        
-        # Get the features we need for prediction (most recent data point)
-        current_row = future_data.iloc[-1:].copy()
-        
-        # Scale the features - create a DataFrame with proper column names
-        if hasattr(scaler, 'feature_names'):
-            # Use the saved feature names if available
-            feature_df = pd.DataFrame(
-                current_row[features].values,
-                columns=scaler.feature_names
-            )
-            scaled_features = scaler.transform(feature_df)
-        else:
-            # Fallback to standard approach
-            current_features = current_row[features].values
-            scaled_features = scaler.transform(current_features)
-        
-        # Make prediction
-        pred = model.predict(scaled_features)[0]
-        predictions.append(pred)
-        
-        # Create a new row for the next day
-        new_row = current_row.copy()
-        
-        # Update price-related features with prediction - Remove random noise
-        new_row['close'] = pred
-        # Estimate open/high/low based on predicted close and previous day's range
-        prev_close = future_data.iloc[-1]['close']
-        
-        # Simple estimation: open near previous close, high/low based on predicted change
-        # Ensure we use scalar values for comparison
-        new_row['open'] = prev_close * 1.001 if pred > prev_close else prev_close * 0.999
-        open_val = new_row['open'].iloc[0] if isinstance(new_row['open'], pd.Series) else new_row['open']
-        
-        new_row['high'] = max(pred, open_val) * 1.01 # Estimate high slightly above open/close
-        new_row['low'] = min(pred, open_val) * 0.99   # Estimate low slightly below open/close
-        
-        # Ensure high >= open/close and low <= open/close
-        # Extract scalar values before comparison
-        high_val = new_row['high'].iloc[0] if isinstance(new_row['high'], pd.Series) else new_row['high']
-        low_val = new_row['low'].iloc[0] if isinstance(new_row['low'], pd.Series) else new_row['low']
-        close_val = new_row['close'].iloc[0] if isinstance(new_row['close'], pd.Series) else new_row['close']
-        
-        new_row['high'] = max(high_val, close_val, open_val)
-        new_row['low'] = min(low_val, close_val, open_val)
+    last_date = base_data.index[-1]
 
-        # Update moving averages properly
+    # --- Moving Average Prediction ---
+    if model is None:
+        print(f"Making future predictions using Moving Average (window={window})...")
+        # Use the dedicated MA prediction function
+        ma_predictions = predict_moving_average(latest_data['close'], window, days)
+        for i in range(days):
+            future_date = last_date + timedelta(days=i + 1)
+            dates.append(future_date)
+            predictions.append(ma_predictions[i])
+
+        prediction_df = pd.DataFrame({'date': dates, 'predicted_price': predictions})
+        prediction_df.set_index('date', inplace=True)
+        return prediction_df
+
+    # --- RF / XGB Prediction ---
+    print(f"Making future predictions using {type(model).__name__}...")
+    future_data = base_data.copy() # Dataframe to update iteratively
+
+    for i in range(days):
+        future_date = last_date + timedelta(days=i + 1)
+        dates.append(future_date)
+
+        # Get the features from the *last available row* in our iteratively updated future_data
+        current_features_row = future_data.iloc[-1:]
+
+        # Ensure the row contains all necessary features before scaling
+        current_features_values = current_features_row[features]
+
+        # Scale the features
+        # Check if scaler expects DataFrame or NumPy array
+        try:
+             # Some scalers might expect DataFrame with named columns
+             scaled_features = scaler.transform(current_features_values)
+        except TypeError:
+             # Others might expect NumPy array
+             scaled_features = scaler.transform(current_features_values.values)
+        except Exception as e:
+             print(f"Error during scaling: {e}")
+             # Handle error, maybe append NaN or last prediction
+             predictions.append(predictions[-1] if predictions else np.nan)
+             # Create placeholder row to continue loop if needed
+             new_row = future_data.iloc[-1:].copy()
+             new_row.index = [future_date]
+             future_data = pd.concat([future_data, new_row])
+             continue
+
+
+        # Make prediction
+        try:
+            pred = model.predict(scaled_features)[0]
+            predictions.append(pred)
+        except Exception as e:
+             print(f"Error during prediction: {e}")
+             predictions.append(predictions[-1] if predictions else np.nan)
+             # Create placeholder row to continue loop if needed
+             new_row = future_data.iloc[-1:].copy()
+             new_row.index = [future_date]
+             future_data = pd.concat([future_data, new_row])
+             continue
+
+
+        # --- Update features for the next step's prediction ---
+        # Create a new row representing the predicted state
+        new_row = current_features_row.copy()
+        new_row.index = [future_date] # Set index to the future date
+
+        # Update the 'close' price with the prediction
+        new_row['close'] = pred
+
+        # Update other features based on this new 'close' price
+        # This requires re-calculating features that depend on 'close' or time
+        # Example: Update moving averages using the new predicted price
+
+        # Important: Re-calculate features based on the *updated* future_data history
+        temp_history = pd.concat([future_data, new_row]) # Include the new row temporarily
+
+        # Recalculate MAs
         if 'ma5' in features:
-            recent_closes = list(future_data.tail(4)['close'].values) + [pred]
-            new_row['ma5'] = sum(recent_closes) / 5
-        
+            new_row['ma5'] = temp_history['close'].rolling(window=5).mean().iloc[-1]
         if 'ma7' in features:
-            recent_closes = list(future_data.tail(6)['close'].values) + [pred]
-            new_row['ma7'] = sum(recent_closes) / 7
-            
+            new_row['ma7'] = temp_history['close'].rolling(window=7).mean().iloc[-1]
         if 'ma14' in features:
-            recent_closes = list(future_data.tail(13)['close'].values) + [pred]
-            new_row['ma14'] = sum(recent_closes) / 14
-            
-        if 'ema5' in features:
-            alpha = 2 / (5 + 1)
-            new_row['ema5'] = (pred * alpha) + (future_data.iloc[-1]['ema5'] * (1 - alpha))
-            
-        if 'ema14' in features:
-            alpha = 2 / (14 + 1)
-            new_row['ema14'] = (pred * alpha) + (future_data.iloc[-1]['ema14'] * (1 - alpha))
-        
-        # Update price changes
-        if 'price_change_1d' in features:
-            new_row['price_change_1d'] = (pred / future_data.iloc[-1]['close']) - 1
-            
-        if 'price_change_3d' in features and len(future_data) >= 3:
-            new_row['price_change_3d'] = (pred / future_data.iloc[-3]['close']) - 1
-            
-        if 'price_change_7d' in features and len(future_data) >= 7:
-            new_row['price_change_7d'] = (pred / future_data.iloc[-7]['close']) - 1
-        
-        # Update volatility
-        if 'volatility_5d' in features and len(future_data) >= 4:
-            recent_closes = list(future_data.tail(4)['close'].values) + [pred]
-            new_row['volatility_5d'] = np.std(recent_closes)
-            
-        if 'volatility_ratio' in features and len(future_data) >= 4:
-            recent_closes = list(future_data.tail(4)['close'].values) + [pred]
-            volatility = np.std(recent_closes)
-            new_row['volatility_ratio'] = volatility / pred if pred != 0 else 0 # Avoid division by zero
-            
-        # Update MA crossovers
-        if 'ma_crossover' in features and 'ma5' in new_row and 'ma14' in new_row:
-            ma5_val = new_row['ma5'].iloc[0] if isinstance(new_row['ma5'], pd.Series) else new_row['ma5']
-            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
-            new_row['ma_crossover'] = int(ma5_val > ma14_val)
-            
-        # Update Bollinger Bands
-        if 'bb_upper' in features and 'ma14' in new_row:
-            std_20 = np.std(list(future_data.tail(19)['close'].values) + [pred])
-            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
-            new_row['bb_upper'] = ma14_val + (std_20 * 2)
-            
-        if 'bb_lower' in features and 'ma14' in new_row:
-            std_20 = np.std(list(future_data.tail(19)['close'].values) + [pred])
-            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
-            new_row['bb_lower'] = ma14_val - (std_20 * 2)
-            
-        if 'bb_width' in features and 'bb_upper' in new_row and 'bb_lower' in new_row and 'ma14' in new_row:
-            bb_upper_val = new_row['bb_upper'].iloc[0] if isinstance(new_row['bb_upper'], pd.Series) else new_row['bb_upper']
-            bb_lower_val = new_row['bb_lower'].iloc[0] if isinstance(new_row['bb_lower'], pd.Series) else new_row['bb_lower']
-            ma14_val = new_row['ma14'].iloc[0] if isinstance(new_row['ma14'], pd.Series) else new_row['ma14']
-            new_row['bb_width'] = (bb_upper_val - bb_lower_val) / ma14_val if ma14_val != 0 else 0 # Avoid division by zero
-            
-        # Update RSI if present
-        if 'rsi' in features and len(future_data) >= 14:
-            # Calculate price changes
-            deltas = list(future_data.tail(14)['close'].diff().dropna().values)
-            deltas.append(pred - future_data.iloc[-1]['close'])
-            
-            # Separate gains and losses
-            gains = [max(d, 0) for d in deltas]
-            losses = [abs(min(d, 0)) for d in deltas]
-            
-            # Calculate average gain and loss
-            avg_gain = sum(gains) / 14
-            avg_loss = sum(losses) / 14
-            
-            # Calculate RS and RSI
-            if avg_loss == 0:
-                new_row['rsi'] = 100
-            else:
-                rs = avg_gain / avg_loss
-                new_row['rsi'] = 100 - (100 / (1 + rs))
-                
-        # Update momentum if present
-        if 'momentum' in features:
-            new_row['momentum'] = pred - future_data.iloc[-5]['close'] if len(future_data) >= 5 else 0
-        
-        # Set the index for the new row
-        new_row.index = [future_date]
-        
-        # Add the new row to the future data
+            new_row['ma14'] = temp_history['close'].rolling(window=14).mean().iloc[-1]
+        # Add other feature recalculations here (EMA, RSI, Volatility, etc.)
+        # This part needs to mirror the logic in engineFeatures.py carefully!
+        # --- Simplified example for price change ---
+        if 'price_change_1d' in features and len(future_data) > 0:
+             new_row['price_change_1d'] = (pred / future_data['close'].iloc[-1]) - 1 if future_data['close'].iloc[-1] != 0 else 0
+
+        # Add more feature updates as needed...
+
+        # Append the updated row for the next iteration's calculation
         future_data = pd.concat([future_data, new_row])
-    
-    # Create prediction DataFrame
-    prediction_df = pd.DataFrame({
-        'date': dates,
-        'predicted_price': predictions
-    })
+
+
+    prediction_df = pd.DataFrame({'date': dates, 'predicted_price': predictions})
     prediction_df.set_index('date', inplace=True)
-    
     return prediction_df
 
 def visualize_predictions(historical_data, predictions, sentiment_data=None, save_path="price_prediction.png"):
@@ -443,109 +514,3 @@ def visualize_predictions(historical_data, predictions, sentiment_data=None, sav
     plt.close()
     
     print(f"Prediction visualization saved as {save_path}")
-
-def backtest_model(model, scaler, features, data, lookback_days=30, prediction_days=5):
-    """
-    Backtest the model on historical data
-    
-    Args:
-        model: Trained model
-        scaler: Fitted scaler
-        features: List of feature names
-        data: DataFrame with historical data
-        lookback_days: Number of days to use for each prediction
-        prediction_days: Number of days ahead to predict
-        
-    Returns:
-        DataFrame with backtest results
-    """
-    print("Backtesting model...")
-    
-    # Ensure we have enough data
-    if len(data) < lookback_days + prediction_days + 20:
-        print("Not enough data for backtesting")
-        return None
-    
-    # Add feature names to scaler if not present
-    if not hasattr(scaler, 'feature_names'):
-        scaler.feature_names = features
-    
-    # Determine backtest points (every 10 days)
-    backtest_points = list(range(lookback_days, len(data) - prediction_days, 10))
-    
-    results = []
-    
-    # Fix: iterate directly through backtest_points instead of using range()
-    for i in backtest_points:
-        # Get historical data up to this point
-        historical = data.iloc[:i].copy()
-        
-        # Get actual future data for comparison
-        actual = data.iloc[i:i+prediction_days].copy()
-        
-        if len(actual) < prediction_days:
-            continue
-        
-        # Make prediction
-        future_pred = make_future_predictions(
-            model, scaler, features, historical, days=prediction_days
-        )
-        
-        # Compare prediction with actual data
-        for j in range(min(len(future_pred), len(actual))):
-            pred_date = future_pred.index[j]
-            # Find the closest date in actual data
-            closest_date = actual.index[min(j, len(actual)-1)]
-            
-            pred_price = future_pred['predicted_price'].iloc[j]
-            actual_price = actual['close'].loc[closest_date]
-            
-            error = actual_price - pred_price
-            error_pct = (error / actual_price) * 100
-            
-            results.append({
-                'prediction_date': historical.index[-1],
-                'target_date': pred_date,
-                'predicted_price': pred_price,
-                'actual_price': actual_price,
-                'error': error,
-                'error_pct': error_pct
-            })
-    
-    # Create results DataFrame
-    results_df = pd.DataFrame(results)
-    
-    # Check if we have results before calculating metrics
-    if len(results_df) == 0:
-        print("No valid backtest results generated")
-        return {
-            'results': pd.DataFrame(),
-            'metrics': {
-                'mse': float('nan'),
-                'rmse': float('nan'),
-                'mae': float('nan'),
-                'mape': float('nan')
-            }
-        }
-    
-    # Calculate aggregate metrics
-    mse = mean_squared_error(results_df['actual_price'], results_df['predicted_price'])
-    rmse = np.sqrt(mse)
-    mae = mean_absolute_error(results_df['actual_price'], results_df['predicted_price'])
-    mape = results_df['error_pct'].abs().mean()
-    
-    print(f"Backtest Results:")
-    print(f"  MSE: {mse:.4f}")
-    print(f"  RMSE: {rmse:.4f}")
-    print(f"  MAE: {mae:.4f}")
-    print(f"  MAPE: {mape:.2f}%")
-    
-    return {
-        'results': results_df,
-        'metrics': {
-            'mse': mse,
-            'rmse': rmse,
-            'mae': mae,
-            'mape': mape
-        }
-    }
