@@ -4,14 +4,11 @@ import pandas as pd
 import numpy as np
 from bson import CodecOptions
 from pymongo import MongoClient
-from sklearn.model_selection import train_test_split
 
 import fetchData
 import preProcessor
 import engineFeatures
 import simplePredictionModel
-import modelOptimizer
-import lstmModel  # Import the new LSTM module
 
 
 class PredictionModel:
@@ -33,253 +30,169 @@ class PredictionModel:
         
 
     def runEverything(self):
-        # Step 1: Get raw data for prediction
+        # Step 1: Get raw data
         rawData = fetchData.getDataForPrediction(self, cryptoCoin="BTC", numberOfPastDaysOfData=365)
-        
-        # Step 2: Preprocess the data
+
+        # Step 2: Preprocess data
         processedData = preProcessor.preprocessData(self, rawData)
-        
+
         # Step 3: Engineer features
         featuresDF = engineFeatures.engineFeatures(self, processedData)
-        
-        # Print feature summary
+
+        # Print feature summary and save
         print("\nEngineered Features Summary:")
         print(f"Total features: {len(featuresDF.columns)}")
         print(f"Total data points: {len(featuresDF)}")
         print("Feature names:", ", ".join(featuresDF.columns.tolist()[:5]) + "...")
-        
-        # Save raw feature data first
         csv_dir = "Services/Models/data/data_exports"
-        if not os.path.exists(csv_dir):
-            os.makedirs(csv_dir)
-        
+        if not os.path.exists(csv_dir): os.makedirs(csv_dir)
         features_csv = f"{csv_dir}/raw_features.csv"
         featuresDF.to_csv(features_csv)
         print(f"Raw features saved to {features_csv}")
-        
-        # Step 4: Train standard prediction model and evaluate
-        print("Training prediction models...")
-        model_results = simplePredictionModel.train_model(
-            featuresDF, 
-            target_column='close', 
-            forecast_days=5
-        )
-        
-        # Print model evaluation metrics
-        print("\nBest Model Evaluation Metrics:")
-        print(f"Best model: {model_results.get('best_model', 'unknown')}")
-        for metric, value in model_results['metrics'].items():
-            print(f"  {metric.upper()}: {value:.4f}")
-        
-        # Print comparison of all models
-        print("\nAll Models Comparison:")
-        for model_name, metrics in model_results.get('all_metrics', {}).items():
-            print(f"  {model_name.upper()}:")
-            for metric in ['rmse', 'mape', 'r2']:
-                if metric in metrics:
-                    print(f"    {metric.upper()}: {metrics[metric]:.4f}")
-        
-        # Step 5: Train LSTM model
+
+        # --- Step 4: Train LSTM Model ---
+        print("\n--- Starting LSTM Model Training ---")
         try:
-            print("\nTraining LSTM model...")
-            # Use a smaller sequence length if dataset is smaller
-            seq_length = min(10, len(featuresDF) // 5)  # Adjust sequence length based on data size
-            
-            lstm_results = lstmModel.train_lstm_model(
+            # Train only the LSTM model
+            lstm_training_results = simplePredictionModel.train_model(
                 featuresDF,
                 target_column='close',
                 forecast_days=5,
-                test_size=0.2,
-                seq_length=seq_length
+                lstm_seq_length=10 # Can be adjusted
             )
-            
-            print("\nLSTM Model Evaluation Metrics:")
-            for metric, value in lstm_results['metrics'].items():
-                print(f"  {metric.upper()}: {value:.4f}")
-                
-            # Decide whether to use LSTM based on performance comparison
-            if lstm_results['metrics']['rmse'] < model_results['metrics']['rmse']:
-                print("\nLSTM model performs better - using it for predictions")
-                use_lstm = True
-            else:
-                print("\nTree-based model performs better - continuing with optimization")
-                use_lstm = False
-                
         except Exception as e:
-            print(f"\nError training LSTM model: {e}")
-            print("Continuing with tree-based models only")
-            use_lstm = False
-        
-        # Select best model for predictions
-        best_model = model_results['model']
-        
-        # Run backtest to evaluate model performance on historical data
-        print("\nRunning backtest on historical data...")
-        backtest_results = simplePredictionModel.backtest_model(
-            best_model,
-            model_results['scaler'],
-            model_results['features'],
-            featuresDF
-        )
-        
-        # Make predictions for the next 5 days
-        print("\nMaking predictions for the next 5 days...")
-        future_predictions = simplePredictionModel.make_future_predictions(
-            best_model,
-            model_results['scaler'],
-            model_results['features'],
-            featuresDF,
-            days=5
-        )
-        
-        # Print detailed prediction information
-        print("\nDetailed Price Predictions:")
-        for date, row in future_predictions.iterrows():
-            # Calculate day-over-day change if not the first prediction
-            if date == future_predictions.index[0]:
-                last_price = featuresDF['close'].iloc[-1]
-                day_change_pct = ((row['predicted_price'] - last_price) / last_price) * 100
-                print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f} ({day_change_pct:+.2f}% from last known price)")
-            else:
-                # Use iloc instead of direct position-based indexing
-                idx = future_predictions.index.get_loc(date) - 1
-                prev_price = future_predictions['predicted_price'].iloc[idx]
-                day_change_pct = ((row['predicted_price'] - prev_price) / prev_price) * 100
-                print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f} ({day_change_pct:+.2f}% daily change)")
-        
-        # Calculate overall prediction trend
-        first_pred = future_predictions['predicted_price'].iloc[0]
-        last_pred = future_predictions['predicted_price'].iloc[-1]
-        total_change_pct = ((last_pred - first_pred) / first_pred) * 100
-        print(f"\nOverall {len(future_predictions)}-day prediction trend: {total_change_pct:+.2f}%")
-        
-        # Step 6: Optimize tree-based models with hyperparameter tuning
-        print("\nStarting model optimization...")
-        
-        # Create train/test split
-        X = featuresDF.drop('target', axis=1) if 'target' in featuresDF.columns else featuresDF
-        y = featuresDF['close']
-        
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.2, shuffle=False
-        )
-        
-        # Analyze feature importance of the basic model
-        print("\nAnalyzing feature importance...")
-        feature_importance = modelOptimizer.analyze_feature_importance(
-            model_results['model'],
-            model_results['features'],
-            save_path="Services/Models/data/feature_importance.png"
-        )
-        
-        print("\nTop 10 most important features:")
-        print(feature_importance.head(10))
-        
-        # For LSTM path
-        if use_lstm:
-            print("\nMaking predictions with LSTM model...")
-            future_predictions = lstmModel.predict_with_lstm(
-                lstm_results,
-                featuresDF,
+            print(f"FATAL ERROR during model training: {e}")
+            import traceback
+            traceback.print_exc()
+            return # Stop execution if training fails fundamentally
+
+        if lstm_training_results is None:
+             print("LSTM training failed or was skipped. Exiting.")
+             return
+
+        # Extract results for the LSTM model
+        lstm_model = lstm_training_results['model']
+        model_scaler = lstm_training_results['scaler'] # Dictionary with 'feature' and 'target' scalers
+        model_features = lstm_training_results['features']
+        seq_length = lstm_training_results['seq_length']
+
+        # Print evaluation metrics for the LSTM model
+        print(f"\n--- LSTM Model Evaluation ---")
+        print("  Test Metrics:")
+        for metric, value in lstm_training_results['metrics'].items():
+            print(f"    {metric.upper()}: {value:.4f}")
+        if lstm_training_results.get('train_metrics'):
+            print("  Train Metrics (Scaled):")
+            for metric, value in lstm_training_results['train_metrics'].items():
+                print(f"    {metric.upper()}: {value:.4f}")
+        if lstm_training_results.get('validation_metrics'):
+            print("  Validation Metrics (Scaled):")
+            for metric, value in lstm_training_results['validation_metrics'].items():
+                print(f"    {metric.upper()}: {value:.4f}")
+
+        # --- Step 5: Backtesting (LSTM) ---
+        print("\n--- Running Backtest ---")
+        try:
+             # Pass the feature scaler and seq_length
+             backtest_results = simplePredictionModel.backtest_model(
+                 lstm_model,
+                 model_scaler['feature'], # Pass feature scaler
+                 model_features,
+                 featuresDF, # Pass original featuresDF
+                 seq_length=seq_length # Pass seq_length
+             )
+        except Exception as e:
+             print(f"Error during backtesting: {e}")
+             import traceback
+             traceback.print_exc()
+             backtest_results = None
+
+        # --- Step 6: Future Predictions (LSTM) ---
+        print("\n--- Making Future Predictions ---")
+        try:
+            # Prepare input dictionary for LSTM prediction function
+            lstm_pred_input = {
+                'model': lstm_model,
+                'feature_scaler': model_scaler['feature'],
+                'target_scaler': model_scaler['target'],
+                'seq_length': seq_length
+            }
+            # Ensure feature scaler has necessary attributes
+            if not hasattr(lstm_pred_input['feature_scaler'], 'feature_names_in_') and hasattr(lstm_pred_input['feature_scaler'], 'feature_names'):
+                 lstm_pred_input['feature_scaler'].feature_names_in_ = np.array(lstm_pred_input['feature_scaler'].feature_names, dtype=object)
+                 lstm_pred_input['feature_scaler'].n_features_in_ = len(lstm_pred_input['feature_scaler'].feature_names)
+
+            future_predictions = simplePredictionModel.lstmModel.predict_with_lstm(
+                lstm_pred_input,
+                featuresDF, # Pass original featuresDF
                 days=5
             )
-        # For tree-based models path
+        except Exception as e:
+            print(f"Error during future prediction: {e}")
+            import traceback
+            traceback.print_exc()
+            future_predictions = pd.DataFrame()
+
+        # Print detailed prediction info
+        if not future_predictions.empty:
+            print("\nDetailed Price Predictions:")
+            if future_predictions.index[0] == future_predictions.index[0]:
+                last_hist_price = featuresDF['close'].iloc[-1]
+                for date, row in future_predictions.iterrows():
+                    current_price = row['predicted_price']
+                    if date == future_predictions.index[0]:
+                        day_change_pct = ((current_price - last_hist_price) / last_hist_price) * 100
+                        print(f"  {date.strftime('%Y-%m-%d')}: ${current_price:.2f} ({day_change_pct:+.2f}% from last known price)")
+                    else:
+                        idx = future_predictions.index.get_loc(date) - 1
+                        prev_price = future_predictions['predicted_price'].iloc[idx]
+                        day_change_pct = ((current_price - prev_price) / prev_price) * 100
+                        print(f"  {date.strftime('%Y-%m-%d')}: ${current_price:.2f} ({day_change_pct:+.2f}% daily change)")
+
+                first_pred = future_predictions['predicted_price'].iloc[0]
+                last_pred = future_predictions['predicted_price'].iloc[-1]
+                total_change_pct = ((last_pred - first_pred) / first_pred) * 100
+                print(f"\nOverall {len(future_predictions)}-day prediction trend: {total_change_pct:+.2f}%")
         else:
-            # Optimize models if dataset is large enough (skip for small datasets)
-            if len(X_train) > 50:
-                print("\nOptimizing models with hyperparameter tuning...")
-                
-                # Create a set of optimized models
-                optimized_models = {}
-                
-                # Optimize Random Forest
-                try:
-                    rf_model, rf_params = modelOptimizer.optimize_random_forest(X_train, y_train, cv=5)
-                    optimized_models['random_forest'] = rf_model
-                except Exception as e:
-                    print(f"Error optimizing Random Forest: {e}")
-                
-                # Optimize XGBoost
-                try:
-                    xgb_model, xgb_params = modelOptimizer.optimize_xgboost(X_train, y_train, cv=5)
-                    optimized_models['xgboost'] = xgb_model
-                except Exception as e:
-                    print(f"Error optimizing XGBoost: {e}")
-                
-                # Add basic model as fallback
-                optimized_models['basic_rf'] = model_results['model']
-                
-                # Train ensemble and evaluate
-                if len(optimized_models) > 1:
-                    print("\nTraining ensemble model...")
-                    ensemble_results = modelOptimizer.train_ensemble(
-                        optimized_models, X_train, y_train, X_test, y_test
-                    )
-                    
-                    # Plot model comparison
-                    modelOptimizer.plot_model_comparison(
-                        ensemble_results, y_test, save_path="Services/Models/data/model_comparison.png"
-                    )
-                    
-                    # Save the best models
-                    model_paths = modelOptimizer.save_models(optimized_models)
-                    print(f"\nSaved {len(model_paths)} models to disk.")
-                    
-                    # Use the best model for predictions
-                    best_model_name = min(ensemble_results['metrics'], 
-                                         key=lambda x: ensemble_results['metrics'][x]['rmse'])
-                    
-                    print(f"\nBest model: {best_model_name}")
-                    best_model = optimized_models.get(best_model_name, model_results['model'])
-                    
-                    # Make predictions using the best model
-                    print("\nMaking predictions with the best model...")
-                    future_predictions = simplePredictionModel.make_future_predictions(
-                        best_model,
-                        model_results['scaler'],
-                        model_results['features'],
-                        featuresDF,
-                        days=5
-                    )
-        
-        # Step 7: Print and visualize predictions
-        print("\nPrice Predictions:")
-        for date, row in future_predictions.iterrows():
-            print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f}")
-        
-        print("\nCreating visualization...")
-        simplePredictionModel.visualize_predictions(
-            featuresDF[['close']],
-            future_predictions,
-            save_path="Services/Models/data/crypto_price_prediction.png"
-        )
-        
-        # Save the engineered features to CSV
-        csv_dir = "Services/Models/data/data_exports"
-        if not os.path.exists(csv_dir):
-            os.makedirs(csv_dir)
-        
-        # Save predictions to CSV
-        predictions_csv = f"{csv_dir}/price_predictions.csv"
-        future_predictions.to_csv(predictions_csv)
-        print(f"Predictions saved to {predictions_csv}")
-        
-        # Return results dictionary
+            print("\nFuture predictions could not be generated.")
+
+        # --- Step 7: Remove Feature Importance & Optimization ---
+        print("\nSkipping feature importance and optimization (LSTM only).")
+        feature_importance = None # Set to None as it's not calculated
+
+        # --- Step 8: Visualization and Saving ---
+        print("\n--- Final Visualization and Saving ---")
+        if not future_predictions.empty:
+            print("Creating visualization...")
+            if 'avg_sentiment_score' not in featuresDF.columns: featuresDF['avg_sentiment_score'] = 0
+            if 'fear_greed_index' not in featuresDF.columns: featuresDF['fear_greed_index'] = 50
+
+            simplePredictionModel.visualize_predictions(
+                featuresDF,
+                future_predictions,
+                save_path="Services/Models/data/crypto_price_prediction.png"
+            )
+
+            predictions_csv = f"{csv_dir}/price_predictions.csv"
+            future_predictions.to_csv(predictions_csv)
+            print(f"Predictions saved to {predictions_csv}")
+        else:
+            print("Skipping visualization and prediction saving due to errors.")
+
+        # --- Step 9: Return Results ---
         results_dict = {
-            "features": featuresDF,
-            "model_results": model_results,
+            "best_model_name": "lstm", # Hardcoded as LSTM is the only model
+            "best_model_type": "lstm",
+            "features_df": featuresDF,
+            "training_results": lstm_training_results, # Contains LSTM results
             "predictions": future_predictions,
-            "feature_importance": feature_importance.head(20).to_dict()
+            "feature_importance": {} # Empty dict as it's not calculated
         }
-        
-        # Add LSTM results if available
-        if use_lstm:
-            results_dict["lstm_results"] = lstm_results
-            
+
+        print("\nExecution finished.")
         return results_dict
 
 if __name__ == "__main__":
-    # Example usage
     predictionModel = PredictionModel()
     results = predictionModel.runEverything()
 

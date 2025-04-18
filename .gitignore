@@ -4,3 +4,4 @@ __pycache__
 DataDump/*.csv
 files
 mongoStructure.txt
+Services/Models/data
