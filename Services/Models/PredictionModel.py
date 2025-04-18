@@ -6,6 +6,7 @@ from bson import CodecOptions
 from pymongo import MongoClient
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+import json  # Import the json library
 
 import fetchData
 import preProcessor
@@ -34,8 +35,12 @@ class PredictionModel:
         
 
     def runEverything(self):
+        # --- Capture cryptoCoin ---
+        crypto_coin_symbol = "BTC"  # Or get dynamically if needed
+        # --------------------------
+        
         # Step 1: Get raw data for prediction
-        rawData = fetchData.getDataForPrediction(self, cryptoCoin="BTC", numberOfPastDaysOfData=365)
+        rawData = fetchData.getDataForPrediction(self, cryptoCoin=crypto_coin_symbol, numberOfPastDaysOfData=365)
         
         # Step 2: Preprocess the data
         processedData = preProcessor.preprocessData(self, rawData)
@@ -409,7 +414,50 @@ class PredictionModel:
         predictions_csv = f"{csv_dir}/price_predictions.csv"
         future_predictions.to_csv(predictions_csv)
         print(f"Predictions saved to {predictions_csv}")
-        
+
+        # --- Generate and save JSON data export ---
+        print("\nGenerating JSON data export...")
+        json_export_path = os.path.join(csv_dir, f"{crypto_coin_symbol}_data_export.json")
+
+        # Prepare historical price data
+        historical_price_data = [
+            {"date": date.strftime('%Y-%m-%d'), "price": price}
+            for date, price in featuresDF['close'].items()
+        ]
+
+        # Prepare predicted price data
+        predicted_price_data = [
+            {"date": date.strftime('%Y-%m-%d'), "price": price}
+            for date, price in future_predictions['predicted_price'].items()
+        ]
+
+        # Prepare positive sentiment data (handle if column doesn't exist)
+        positive_sentiment_data = []
+        if 'pct_positive' in featuresDF.columns:
+            positive_sentiment_data = [
+                {"date": date.strftime('%Y-%m-%d'), "sentiment": sentiment}
+                for date, sentiment in featuresDF['pct_positive'].items() if pd.notna(sentiment)
+            ]
+        else:
+            print("Warning: 'pct_positive' column not found in featuresDF for JSON export.")
+
+        # Combine into final JSON structure
+        json_data = {
+            "coin": crypto_coin_symbol,
+            "historical_price": historical_price_data,
+            "predicted_price": predicted_price_data,
+            "positive_sentiment_ratio": positive_sentiment_data
+        }
+
+        # Save to JSON file
+        try:
+            with open(json_export_path, 'w') as f:
+                json.dump(json_data, f, indent=2)  # Use indent for readability
+            print(f"JSON data export saved to {json_export_path}")
+        except Exception as e:
+            print(f"Error saving JSON data export: {e}")
+        # ------------------------------------------
+
         # Return results dictionary
         results_dict = {
             "features": featuresDF,
