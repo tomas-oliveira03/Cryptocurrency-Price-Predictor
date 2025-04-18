@@ -46,7 +46,7 @@ class RedditAgent(Agent):
             print(f"{AGENT_NAME} Running periodic reddit scraper...")
             try:
                 loop = asyncio.get_event_loop()
-                # await loop.run_in_executor(None, self.agent.redditScraper.processAllSubreddits)
+                await loop.run_in_executor(None, self.agent.redditScraper.processAllSubreddits)
 
                 await sendMessage(self, "newsOrchestrator", "job_finished", self.agent.informJobEnded)
                                 

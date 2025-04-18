@@ -46,7 +46,7 @@ class ForumAgent(Agent):
             print(f"{AGENT_NAME} Running periodic forum scraper...")
             try:
                 loop = asyncio.get_event_loop()
-                # await loop.run_in_executor(None, self.agent.forumScraper.getAllInformation)
+                await loop.run_in_executor(None, self.agent.forumScraper.getAllInformation)
                 
                 await sendMessage(self, "newsOrchestrator", "job_finished", self.agent.informJobEnded)
                                 

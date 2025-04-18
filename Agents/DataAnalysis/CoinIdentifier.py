@@ -47,7 +47,7 @@ class CoinIdentifierAgent(Agent):
                     return
 
                 print(f"{AGENT_NAME} Analyzing new data for {databaseCollectionName}...")
-                # self.agent.coinIdentifier.idetifyCoinsForAllCollections(databaseCollectionName)
+                self.agent.coinIdentifier.idetifyCoinsForAllCollections(databaseCollectionName)
 
                 payload.setProviderAgentName(self.agent.providerAgentName)
 

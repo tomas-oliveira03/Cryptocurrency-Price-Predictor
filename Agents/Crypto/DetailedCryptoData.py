@@ -47,8 +47,8 @@ class DetailedCryptoDataAgent(Agent):
             print(f"{AGENT_NAME} Running periodic crypto data...")
             try:
                 loop = asyncio.get_event_loop()
-                # numberOfInsertions = await loop.run_in_executor(None, self.agent.detailedCryptoData.fetchCoinsDataFullAnalysis)
-                # print(f"{AGENT_NAME} Crypto data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
+                numberOfInsertions = await loop.run_in_executor(None, self.agent.detailedCryptoData.fetchCoinsDataFullAnalysis)
+                print(f"{AGENT_NAME} Crypto data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
                 
                 await sendMessage(self, "cryptoOrchestrator", "job_finished", self.agent.informJobEnded)
                                 

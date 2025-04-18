@@ -46,7 +46,7 @@ class ArticlesAgent(Agent):
             print(f"{AGENT_NAME} Running periodic articles scraper...")
             try:
                 loop = asyncio.get_event_loop()
-                # await loop.run_in_executor(None, self.agent.articlesScraper.fetchAllWebsiteArticlesContent)
+                await loop.run_in_executor(None, self.agent.articlesScraper.fetchAllWebsiteArticlesContent)
 
                 await sendMessage(self, "newsOrchestrator", "job_finished", self.agent.informJobEnded)
                                 

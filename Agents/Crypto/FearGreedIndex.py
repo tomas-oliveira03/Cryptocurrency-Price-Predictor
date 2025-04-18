@@ -46,8 +46,8 @@ class FearGreedIndexAgent(Agent):
             print(f"{AGENT_NAME} Running periodic fear-greed index...")
             try:
                 loop = asyncio.get_event_loop()
-                # numberOfInsertions = await loop.run_in_executor(None, self.agent.fearGreedIndex.fetchFearGreedIndexData)
-                # print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
+                numberOfInsertions = await loop.run_in_executor(None, self.agent.fearGreedIndex.fetchFearGreedIndexData)
+                print(f"{AGENT_NAME} Fear-Greed index data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
                 
                 await sendMessage(self, "cryptoOrchestrator", "job_finished", self.agent.informJobEnded)
                                 

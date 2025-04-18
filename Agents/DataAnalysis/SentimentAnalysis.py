@@ -47,7 +47,7 @@ class SentimentAnalysisAgent(Agent):
                     return
 
                 print(f"{AGENT_NAME} Analyzing new data for {databaseCollectionName}...")
-                # self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
+                self.agent.sentimentAnalysis.analyzeSentimentsForAllCollections(databaseCollectionName)
 
                 payload.setProviderAgentName(self.agent.providerAgentName)
 
