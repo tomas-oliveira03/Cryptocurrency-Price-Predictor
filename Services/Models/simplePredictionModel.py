@@ -354,13 +354,14 @@ def make_future_predictions(model, scaler, features, latest_data, days=5):
     
     return prediction_df
 
-def visualize_predictions(historical_data, predictions, save_path="price_prediction.png"):
+def visualize_predictions(historical_data, predictions, sentiment_data=None, save_path="price_prediction.png"):
     """
-    Visualize historical data and predictions
+    Visualize historical data, predictions, and optionally sentiment
     
     Args:
         historical_data: DataFrame with historical data (needs at least 'close' column)
         predictions: DataFrame with predictions (needs 'predicted_price' column)
+        sentiment_data: Optional DataFrame with sentiment data (needs index matching historical_data and a 'pct_positive' column)
         save_path: Path to save the visualization
     """
     # Get the last 30 days of historical data for better visualization
@@ -370,41 +371,69 @@ def visualize_predictions(historical_data, predictions, save_path="price_predict
     else:
         historical_subset = historical_data
     
-    # Create figure
-    plt.figure(figsize=(12, 6))
+    # Create figure and primary axis
+    fig, ax1 = plt.subplots(figsize=(14, 7)) # Increased figure size slightly
     
-    # Plot historical data
-    plt.plot(historical_subset.index, historical_subset['close'], 
+    # Plot historical data on primary axis
+    ax1.plot(historical_subset.index, historical_subset['close'], 
              label='Historical Price', color='blue', linewidth=2)
     
-    # Plot predictions
-    plt.plot(predictions.index, predictions['predicted_price'], 
+    # Plot predictions on primary axis
+    ax1.plot(predictions.index, predictions['predicted_price'], 
              label='Predicted Price', color='red', linestyle='--', linewidth=2)
     
     # Add scatter points for better visibility
-    plt.scatter(historical_subset.index, historical_subset['close'], color='blue', s=30)
-    plt.scatter(predictions.index, predictions['predicted_price'], color='red', s=30)
+    ax1.scatter(historical_subset.index, historical_subset['close'], color='blue', s=30)
+    ax1.scatter(predictions.index, predictions['predicted_price'], color='red', s=30)
     
     # Add a vertical line at the last historical data point
     last_hist_date = historical_data.index[-1]
     last_hist_price = historical_data['close'].iloc[-1]
-    plt.axvline(x=last_hist_date, color='gray', linestyle=':', linewidth=1)
+    ax1.axvline(x=last_hist_date, color='gray', linestyle=':', linewidth=1)
     
-    # Calculate price change percentage from the last historical price to the last predicted price
+    # Set primary y-axis label
+    ax1.set_ylabel('Price ($)', color='blue', fontsize=12)
+    ax1.tick_params(axis='y', labelcolor='blue')
+    ax1.grid(True, axis='y', linestyle='--', alpha=0.3) # Grid only for price axis
+    
+    # Calculate price change percentage for title
     last_pred_price = predictions['predicted_price'].iloc[-1]
     change_pct = ((last_pred_price - last_hist_price) / last_hist_price) * 100
     direction = "increase" if change_pct >= 0 else "decrease"
     
-    # Add labels and title using the new calculation
-    plt.title(f'Price Prediction: {abs(change_pct):.2f}% {direction} from last known price over next {len(predictions)} days', 
+    # Add sentiment data if provided
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = [], []
+    if sentiment_data is not None and not sentiment_data.empty and 'pct_positive' in sentiment_data.columns:
+        # Align sentiment data with the historical subset dates
+        sentiment_subset = sentiment_data.reindex(historical_subset.index).dropna()
+        
+        if not sentiment_subset.empty:
+            # Create secondary axis
+            ax2 = ax1.twinx()
+            
+            # Plot positive sentiment percentage on secondary axis
+            ax2.plot(sentiment_subset.index, sentiment_subset['pct_positive'], 
+                     label='Positive Sentiment Ratio', color='green', linestyle=':', linewidth=1.5, alpha=0.7)
+            
+            # Set secondary y-axis label and limits
+            ax2.set_ylabel('Positive Sentiment Ratio (0-1)', color='green', fontsize=12)
+            ax2.tick_params(axis='y', labelcolor='green')
+            ax2.set_ylim(0, 1) # Sentiment ratio is between 0 and 1
+            
+            # Get legend items for the second axis
+            lines2, labels2 = ax2.get_legend_handles_labels()
+
+    # Combine legends
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left', fontsize=10)
+
+    # Add title and common x-axis label
+    plt.title(f'Price Prediction & Sentiment: {abs(change_pct):.2f}% {direction} from last known price over next {len(predictions)} days', 
               fontsize=14, fontweight='bold')
-    plt.xlabel('Date', fontsize=12)
-    plt.ylabel('Price ($)', fontsize=12)
-    plt.legend(loc='best', fontsize=12)
-    plt.grid(True, alpha=0.3)
+    ax1.set_xlabel('Date', fontsize=12)
     
     # Format x-axis
-    plt.gcf().autofmt_xdate()
+    fig.autofmt_xdate()
     plt.tight_layout()
     
     # Save the plot

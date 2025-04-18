@@ -248,9 +248,14 @@ class PredictionModel:
             print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f}")
         
         print("\nCreating visualization...")
+        # Pass the relevant sentiment column if it exists in featuresDF
+        sentiment_col = 'pct_positive' if 'pct_positive' in featuresDF.columns else None
+        sentiment_plot_data = featuresDF[[sentiment_col]] if sentiment_col else None
+        
         simplePredictionModel.visualize_predictions(
             featuresDF[['close']],
             future_predictions,
+            sentiment_data=sentiment_plot_data, # Pass sentiment data here
             save_path="Services/Models/data/crypto_price_prediction.png"
         )
         
