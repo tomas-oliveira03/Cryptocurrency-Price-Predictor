@@ -4,36 +4,6 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-def calculate_metrics(y_true, y_pred):
-    """Calculate standard regression metrics."""
-    y_true = pd.Series(y_true).values # Ensure numpy array
-    y_pred = pd.Series(y_pred).values # Ensure numpy array
-
-    # Remove NaNs resulting from alignment or failed predictions
-    valid_idx = pd.notna(y_true) & pd.notna(y_pred)
-    if not np.any(valid_idx):
-        return {'mse': np.inf, 'rmse': np.inf, 'mae': np.inf, 'r2': -np.inf, 'mape': np.inf}
-
-    y_true_valid = y_true[valid_idx]
-    y_pred_valid = y_pred[valid_idx]
-
-    if len(y_true_valid) == 0:
-         return {'mse': np.inf, 'rmse': np.inf, 'mae': np.inf, 'r2': -np.inf, 'mape': np.inf}
-
-    mse = mean_squared_error(y_true_valid, y_pred_valid)
-    rmse = np.sqrt(mse)
-    mae = mean_absolute_error(y_true_valid, y_pred_valid)
-    r2 = r2_score(y_true_valid, y_pred_valid)
-
-    # Calculate MAPE carefully
-    mape_mask = y_true_valid != 0
-    if np.any(mape_mask):
-        mape = np.mean(np.abs((y_true_valid[mape_mask] - y_pred_valid[mape_mask]) / y_true_valid[mape_mask])) * 100
-    else:
-        mape = np.inf
-
-    return {'mse': mse, 'rmse': rmse, 'mae': mae, 'r2': r2, 'mape': mape}
-
 def visualize_predictions(historical_data, predictions, sentiment_data=None, save_path="price_prediction.png"):
     """
     Visualize historical data, predictions, and optionally sentiment

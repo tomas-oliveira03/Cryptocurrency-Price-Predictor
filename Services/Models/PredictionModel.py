@@ -10,7 +10,7 @@ import tensorflow as tf
 import fetchData
 import preProcessor
 import engineFeatures
-from simplePredictionModel import visualize_predictions
+from visualizePredictions import visualize_predictions
 import lstmModel 
 
 def set_seeds(seed=42):
