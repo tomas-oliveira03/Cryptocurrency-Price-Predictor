@@ -12,13 +12,6 @@ import engineFeatures
 from visualizePredictions import visualize_predictions
 import lstmModel 
 
-def set_seeds(seed=42):
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    random.seed(seed)
-    np.random.seed(seed)
-    tf.random.set_seed(seed)
-    print(f"Seeds set to {seed} for random, numpy, and tensorflow (if available).")
-
 class PredictionModel:
     def __init__(self):
         
@@ -36,9 +29,12 @@ class PredictionModel:
         self.forumDB = mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
         self.articlesDB = mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
         
+        self.predictionsDB = mongoClient['ASM'].get_collection('predictions', codec_options=CodecOptions(tz_aware=True))
+            
+        
 
     def runEverything(self, cryptoCoin, forcastDays, initialFetchDays):
-        set_seeds(42)
+        self.setSeeding(42)
         
         # Save raw feature data first
         dataDir = "Services/Models/data"
@@ -169,6 +165,8 @@ class PredictionModel:
         with open(json_export_path, 'w') as f:
             json.dump(json_data, f, indent=2)
         print(f"JSON data export saved to {json_export_path}")
+        
+        self.saveToMongo(json_data)
 
         # Return results dictionary
         results_dict = {
@@ -181,6 +179,40 @@ class PredictionModel:
         }
             
         return results_dict
+
+
+    def saveToMongo(self, data):
+        try:
+            # Convert all date fields in the data to datetime objects with timezone info
+            def convert_dates(obj):
+                if isinstance(obj, list):
+                    for item in obj:
+                        if isinstance(item, dict) and 'date' in item:
+                            item['date'] = pd.to_datetime(item['date']).tz_localize('UTC')
+                return obj
+
+            # Apply the conversion to specific fields
+            data['historical_price'] = convert_dates(data.get('historical_price', []))
+            data['predicted_price'] = convert_dates(data.get('predicted_price', []))
+            data['positive_sentiment_ratio'] = convert_dates(data.get('positive_sentiment_ratio', []))
+
+            # Add a timestamp to the data for sorting purposes
+            data['date'] = pd.Timestamp.now(tz='UTC')
+
+            # Insert the content into the predictionsDB collection
+            self.predictionsDB.insert_one(data)
+            print(f"Content successfully saved to MongoDB with timestamp {data['date']}")
+        except Exception as e:
+            print(f"Failed to save content to MongoDB: {e}")
+            raise
+
+
+    def setSeeding(self, seed=42):
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        random.seed(seed)
+        np.random.seed(seed)
+        tf.random.set_seed(seed)
+        print(f"Seeds set to {seed} for random, numpy, and tensorflow (if available).")
 
 
 if __name__ == "__main__":
