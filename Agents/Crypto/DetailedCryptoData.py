@@ -34,7 +34,7 @@ class DetailedCryptoDataAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            periodicJobBehavior = self.agent.PeriodicDetailedDataCheck(period=CronExpression.EVERY_DAY.value)
+                            periodicJobBehavior = self.agent.PeriodicDetailedDataCheck(period=CronExpression.EVERY_HOUR.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                         
                 

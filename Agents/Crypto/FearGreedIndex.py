@@ -34,7 +34,7 @@ class FearGreedIndexAgent(Agent):
                             
                         else:
                             self.agent.isJobRunning = True
-                            periodicJobBehavior = self.agent.PeriodicIndexCheck(period=CronExpression.EVERY_DAY.value)
+                            periodicJobBehavior = self.agent.PeriodicIndexCheck(period=CronExpression.EVERY_HOUR.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
