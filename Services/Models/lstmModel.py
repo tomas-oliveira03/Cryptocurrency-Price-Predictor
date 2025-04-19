@@ -19,8 +19,8 @@ def createSequences(X, y, seq_length):
 
 
 # Train an LSTM model for price prediction
-def trainLstmModel(features_df, target_column='close', forecast_days=1, test_size=0.2, seq_length=10):
-    print(f"\nTraining LSTM model (target shifted by {forecast_days} day(s))...")
+def trainLstmModel(features_df, target_column='close', forecast_days=1, test_days=7, seq_length=10):
+    print(f"\nTraining LSTM model (target shifted by {forecast_days} day(s)), testing on last {test_days} days...")
     
     # Create target variable (shifted price)
     df = features_df.copy()
@@ -48,18 +48,19 @@ def trainLstmModel(features_df, target_column='close', forecast_days=1, test_siz
     # Create sequences for LSTM
     X_seq, y_seq = createSequences(X_scaled, y_scaled, seq_length)
     
-    # Split data into training and testing sets
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_seq, y_seq, test_size=test_size, shuffle=False
-    )
+    # Split data into training and testing sets based on test_days
+    if len(X_seq) <= test_days:
+        raise ValueError(f"Not enough data ({len(X_seq)} sequences) to create a test set of {test_days} days. Need at least {test_days + 1} sequences.")
+        
+    split_idx = len(X_seq) - test_days
+    X_train, X_test = X_seq[:split_idx], X_seq[split_idx:]
+    y_train, y_test = y_seq[:split_idx], y_seq[split_idx:]
     
     # Determine the correct dates for the y_test predictions 
     # The original index corresponding to y_seq starts seq_length steps into the data
     original_y_seq_index = original_index[seq_length:]
     
     # The test part of this index corresponds to y_test
-    # Calculate the split point index based on the sequence length
-    split_idx = len(X_seq) - len(X_test)
     test_dates_for_lstm = original_y_seq_index[split_idx:]
     
     # Define LSTM architecture
@@ -106,14 +107,6 @@ def trainLstmModel(features_df, target_column='close', forecast_days=1, test_siz
     
     # Calculate MAPE
     mape = np.mean(np.abs((y_test_orig - y_pred_orig) / y_test_orig)) * 100
-    
-    # Print evaluation metrics
-    print(f"LSTM Model Metrics:")
-    print(f"  MSE: {mse_orig:.4f}")
-    print(f"  RMSE: {rmse_orig:.4f}")
-    print(f"  MAE: {mae_orig:.4f}")
-    print(f"  R²: {r2:.4f}")
-    print(f"  MAPE: {mape:.2f}%")
     
     # Results dataframe with correct index
     results_df = pd.DataFrame({
