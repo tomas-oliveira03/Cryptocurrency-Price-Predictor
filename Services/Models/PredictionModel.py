@@ -1,5 +1,4 @@
 import os
-from datetime import datetime, timedelta
 import pandas as pd
 import numpy as np
 from bson import CodecOptions
@@ -63,7 +62,7 @@ class PredictionModel:
         seq_length = min(10, len(featuresDF) // 5)  # Adjust sequence length based on data size
         if seq_length < 1: seq_length = 1 # Ensure seq_length is at least 1
 
-        lstm_results = lstmModel.train_lstm_model(
+        lstm_results = lstmModel.trainLstmModel(
             featuresDF,
             target_column='close',
             forecast_days=1, # Typically train LSTM for 1-step ahead prediction
@@ -85,7 +84,7 @@ class PredictionModel:
         retrain_seq_length = min(10, len(featuresDF) // 10)
         if retrain_seq_length < 1: retrain_seq_length = 1
 
-        final_lstm_model = lstmModel.train_lstm_model(
+        final_lstm_model = lstmModel.trainLstmModel(
             featuresDF, # Use full dataset
             target_column='close',
             forecast_days=1,  # Still 1-step ahead prediction
@@ -97,7 +96,7 @@ class PredictionModel:
         # Step 6: Predict Future with LSTM
         print(f"\n--- Predicting Next {forcastDays} Days using LSTM Model ---")
 
-        future_predictions = lstmModel.predict_with_lstm(
+        future_predictions = lstmModel.predictWithLstm(
             final_lstm_model,
             featuresDF,
             days=forcastDays

@@ -7,8 +7,9 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
-def create_sequences(X, y, seq_length):
-    """Create sequences for LSTM input"""
+# Function to create sequences for LSTM input
+# This function takes the scaled features and target variable and creates sequences of a specified length.
+def createSequences(X, y, seq_length):
     X_seq, y_seq = [], []
     for i in range(len(X) - seq_length):
         X_seq.append(X[i:i + seq_length])
@@ -16,20 +17,9 @@ def create_sequences(X, y, seq_length):
     
     return np.array(X_seq), np.array(y_seq)
 
-def train_lstm_model(features_df, target_column='close', forecast_days=1, test_size=0.2, seq_length=10):
-    """
-    Train an LSTM model for price prediction (typically trained for 1-step ahead prediction)
-    
-    Args:
-        features_df: DataFrame with engineered features
-        target_column: Column to predict
-        forecast_days: Number of days ahead the target variable represents (usually 1 for iterative prediction)
-        test_size: Proportion of data for testing
-        seq_length: Length of input sequences for LSTM
-        
-    Returns:
-        Dictionary with model, scalers, and evaluation results
-    """
+
+# Train an LSTM model for price prediction
+def trainLstmModel(features_df, target_column='close', forecast_days=1, test_size=0.2, seq_length=10):
     print(f"\nTraining LSTM model (target shifted by {forecast_days} day(s))...")
     
     # Create target variable (shifted price)
@@ -43,11 +33,9 @@ def train_lstm_model(features_df, target_column='close', forecast_days=1, test_s
     X = df.drop('target', axis=1)
     y = df['target']
     
-    # --- Store original index before scaling ---
+    # Store original index before scaling
     original_index = df.index
-    # -----------------------------------------
     
-    # Use MinMaxScaler instead of StandardScaler
     feature_scaler = MinMaxScaler(feature_range=(0, 1))
     target_scaler = MinMaxScaler(feature_range=(0, 1))
     
@@ -58,25 +46,23 @@ def train_lstm_model(features_df, target_column='close', forecast_days=1, test_s
     feature_scaler.feature_names = X.columns.tolist()
     
     # Create sequences for LSTM
-    X_seq, y_seq = create_sequences(X_scaled, y_scaled, seq_length)
-    
-    print(f"LSTM sequence shape: {X_seq.shape}")
+    X_seq, y_seq = createSequences(X_scaled, y_scaled, seq_length)
     
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         X_seq, y_seq, test_size=test_size, shuffle=False
     )
     
-    # --- Determine the correct dates for the y_test predictions ---
+    # Determine the correct dates for the y_test predictions 
     # The original index corresponding to y_seq starts seq_length steps into the data
     original_y_seq_index = original_index[seq_length:]
+    
     # The test part of this index corresponds to y_test
     # Calculate the split point index based on the sequence length
     split_idx = len(X_seq) - len(X_test)
     test_dates_for_lstm = original_y_seq_index[split_idx:]
-    # -------------------------------------------------------------
     
-    # Define LSTM architecture - Adjusted
+    # Define LSTM architecture
     model = Sequential([
         LSTM(100, activation='tanh', return_sequences=True, 
              input_shape=(X_train.shape[1], X_train.shape[2])),
@@ -87,10 +73,9 @@ def train_lstm_model(features_df, target_column='close', forecast_days=1, test_s
         Dense(1)
     ])
     
-    # Compile the model
     model.compile(optimizer='adam', loss='mse')
     
-    # Train the model with early stopping - Increased patience
+    # Train the model with early stopping
     early_stop = EarlyStopping(monitor='val_loss', patience=15, restore_best_weights=True)
     
     history = model.fit(
@@ -105,19 +90,14 @@ def train_lstm_model(features_df, target_column='close', forecast_days=1, test_s
     # Evaluate the model
     y_pred = model.predict(X_test).flatten()
     
-    # Calculate metrics on scaled data
-    mse = mean_squared_error(y_test, y_pred)
-    mae = mean_absolute_error(y_test, y_pred)
-    
     # Convert predictions back to original scale for interpretable metrics
     y_test_orig = target_scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
     y_pred_orig = target_scaler.inverse_transform(y_pred.reshape(-1, 1)).flatten()
     
-    # --- Ensure the length of dates matches the predictions ---
+    # Ensure the length of dates matches the predictions
     if len(test_dates_for_lstm) != len(y_test_orig):
         print(f"Warning: Length mismatch between LSTM test dates ({len(test_dates_for_lstm)}) and predictions ({len(y_test_orig)}). Adjusting dates.")
         test_dates_for_lstm = test_dates_for_lstm[:len(y_test_orig)]
-    # ---------------------------------------------------------
 
     mse_orig = mean_squared_error(y_test_orig, y_pred_orig)
     rmse_orig = np.sqrt(mse_orig)
@@ -160,18 +140,10 @@ def train_lstm_model(features_df, target_column='close', forecast_days=1, test_s
         'history': history.history
     }
 
-def predict_with_lstm(model_results, features_df, days=5):
-    """
-    Make predictions using the trained LSTM model
+
+# Make predictions using the trained LSTM model
+def predictWithLstm(model_results, features_df, days=5):
     
-    Args:
-        model_results: Dictionary with trained LSTM model and scalers
-        features_df: DataFrame with the most recent data
-        days: Number of days to predict
-        
-    Returns:
-        DataFrame with predictions
-    """
     # Extract model components
     model = model_results['model']
     feature_scaler = model_results['feature_scaler']
@@ -320,142 +292,3 @@ def predict_with_lstm(model_results, features_df, days=5):
     prediction_df.set_index('date', inplace=True)
     
     return prediction_df
-
-def backtest_lstm_model(model_results, features_df, lookback_days=30, prediction_days=5):
-    """
-    Backtest the LSTM model on historical data.
-
-    Args:
-        model_results: Dictionary containing the trained LSTM model, scalers, etc.
-        features_df: DataFrame with historical features.
-        lookback_days: Number of days of history to use for each prediction point.
-                       Should be >= seq_length.
-        prediction_days: Number of days ahead to predict at each point.
-
-    Returns:
-        Dictionary with backtest results and metrics.
-    """
-    print("Backtesting LSTM model...")
-
-    seq_length = model_results['seq_length']
-    target_column = 'close' # Assuming 'close' is the target
-
-    # Ensure lookback includes sequence length
-    effective_lookback = max(lookback_days, seq_length)
-
-    # Ensure we have enough data
-    if len(features_df) < effective_lookback + prediction_days + 20: # Add buffer
-        print("Not enough data for LSTM backtesting")
-        return {
-            'results': pd.DataFrame(),
-            'metrics': {'mse': float('nan'), 'rmse': float('nan'), 'mae': float('nan'), 'mape': float('nan')}
-        }
-
-    # Determine backtest points (e.g., every 10 days)
-    # Start index ensures we have enough data for the first sequence + lookback
-    start_index = effective_lookback
-    backtest_points = list(range(start_index, len(features_df) - prediction_days, 10))
-
-    results = []
-
-    for i in backtest_points:
-        # Get historical data up to this point (including lookback for feature calculation)
-        historical_data = features_df.iloc[:i].copy()
-
-        # Get actual future data for comparison
-        actual_future = features_df.iloc[i : i + prediction_days].copy()
-
-        if len(actual_future) < prediction_days:
-            continue # Skip if not enough future data
-
-        # Make prediction using the LSTM logic
-        # Use historical_data which includes enough points for the initial sequence
-        try:
-            future_pred_df = predict_with_lstm(
-                model_results,
-                historical_data, # Pass the historical segment
-                days=prediction_days
-            )
-        except Exception as e:
-             print(f"Error during LSTM prediction at index {i}: {e}")
-             continue # Skip this point if prediction fails
-
-
-        # Compare prediction with actual data
-        for j in range(min(len(future_pred_df), len(actual_future))):
-            pred_date = future_pred_df.index[j]
-            # Find the closest date in actual data (usually the same index)
-            actual_date = actual_future.index[j]
-
-            pred_price = future_pred_df['predicted_price'].iloc[j]
-            actual_price = actual_future[target_column].loc[actual_date]
-
-            error = actual_price - pred_price
-            error_pct = (error / actual_price) * 100 if actual_price != 0 else 0
-
-            results.append({
-                'prediction_date': historical_data.index[-1], # Date prediction was made
-                'target_date': pred_date,
-                'predicted_price': pred_price,
-                'actual_price': actual_price,
-                'error': error,
-                'error_pct': error_pct
-            })
-
-    # Create results DataFrame
-    results_df = pd.DataFrame(results)
-
-    # Check if we have results before calculating metrics
-    if results_df.empty:
-        print("No valid LSTM backtest results generated")
-        return {
-            'results': pd.DataFrame(),
-            'metrics': {'mse': float('nan'), 'rmse': float('nan'), 'mae': float('nan'), 'mape': float('nan')}
-        }
-
-    # Calculate aggregate metrics
-    actual = results_df['actual_price']
-    predicted = results_df['predicted_price']
-
-    # Ensure no NaNs before calculating metrics
-    valid_idx = actual.notna() & predicted.notna()
-    if not valid_idx.all():
-        print(f"Warning: Found NaNs in backtest results. Dropping {len(results_df) - valid_idx.sum()} rows.")
-        actual = actual[valid_idx]
-        predicted = predicted[valid_idx]
-        results_df = results_df[valid_idx]
-
-    if actual.empty:
-         print("No valid non-NaN backtest results after filtering.")
-         return {
-            'results': pd.DataFrame(),
-            'metrics': {'mse': float('nan'), 'rmse': float('nan'), 'mae': float('nan'), 'mape': float('nan')}
-        }
-
-
-    mse = mean_squared_error(actual, predicted)
-    rmse = np.sqrt(mse)
-    mae = mean_absolute_error(actual, predicted)
-
-    # Calculate MAPE safely
-    valid_actual = actual[actual != 0]
-    if not valid_actual.empty:
-        mape = np.mean(np.abs((actual[actual != 0] - predicted[actual != 0]) / actual[actual != 0])) * 100
-    else:
-        mape = float('nan')
-
-    print(f"LSTM Backtest Results:")
-    print(f"  MSE: {mse:.4f}")
-    print(f"  RMSE: {rmse:.4f}")
-    print(f"  MAE: {mae:.4f}")
-    print(f"  MAPE: {mape:.2f}%")
-
-    return {
-        'results': results_df,
-        'metrics': {
-            'mse': mse,
-            'rmse': rmse,
-            'mae': mae,
-            'mape': mape
-        }
-    }
