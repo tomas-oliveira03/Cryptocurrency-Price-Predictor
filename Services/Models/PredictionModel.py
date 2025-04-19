@@ -68,14 +68,7 @@ class PredictionModel:
             forecast_days=1, # Typically train LSTM for 1-step ahead prediction
             test_size=0.2,   # Use a portion for validation during training
             seq_length=seq_length
-        )
-        
-        print("\nLSTM Model Initial Training Metrics:")
-        for metric, value in lstm_results['metrics'].items():
-            print(f"  {metric.upper()}: {value:.4f}")
-            
-            
-            
+        )            
             
         # Step 5: Retrain LSTM on full dataset for final model
         print("\n--- Retraining LSTM Model on Full Historical Data ---")
@@ -154,14 +147,25 @@ class PredictionModel:
                 {"date": date.strftime('%Y-%m-%d'), "sentiment": sentiment}
                 for date, sentiment in featuresDF['pct_positive'].items() if pd.notna(sentiment)
             ]
-
+        
+        # Extract model benchmarking results
+        model_metrics = lstm_results['metrics']
+        
         json_data = {
             "coin": cryptoCoin,
             "historical_price": historical_price_data,
             "predicted_price": predicted_price_data,
-            "positive_sentiment_ratio": positive_sentiment_data
+            "positive_sentiment_ratio": positive_sentiment_data,
+            "model_benchmarks": {
+                "mse": model_metrics.get('mse', 0),
+                "rmse": model_metrics.get('rmse', 0),
+                "mae": model_metrics.get('mae', 0),
+                "r2": model_metrics.get('r2', 0),
+                "mape": model_metrics.get('mape', 0)
+            }
         }
 
+        # Save the JSON data to a file
         with open(json_export_path, 'w') as f:
             json.dump(json_data, f, indent=2)
         print(f"JSON data export saved to {json_export_path}")
@@ -172,6 +176,7 @@ class PredictionModel:
             "lstm_results": lstm_results,
             "predictions": future_predictions,
             "json_export_path": json_export_path,
+            "json_data": json_data,  # Add the actual JSON data to the results
             "forcastDays": forcastDays
         }
             
@@ -200,10 +205,30 @@ if __name__ == "__main__":
         lstm_metrics = results.get('lstm_results', {}).get('metrics', {})
         for metric, value in lstm_metrics.items():
             print(f"  {metric.upper()}: {value:.4f}")
+            
+        # Add metrics evaluation
+        r2 = lstm_metrics.get('r2', 0)
+        mape = lstm_metrics.get('mape', 0)
+        print("\nMetrics Evaluation:")
+        if r2 > 0.5:
+            print(f"  R² of {r2:.4f} shows the model has moderate predictive power")
+        else:
+            print(f"  R² of {r2:.4f} suggests the model has limited predictive power")
+            
+        if mape < 5:
+            print(f"  MAPE of {mape:.4f}% indicates relatively accurate predictions")
+        elif mape < 10:
+            print(f"  MAPE of {mape:.4f}% indicates acceptable prediction accuracy")
+        else:
+            print(f"  MAPE of {mape:.4f}% indicates high prediction errors")
 
-        print(f"Predictions saved to CSV and JSON: {results.get('json_export_path')}")
+        print(f"\nPredictions saved to CSV and JSON: {results.get('json_export_path')}")
         print(f"Final {fc_days}-day Predictions:")
         print(results.get('predictions', pd.DataFrame()))
+        
+        # Print confirmation that JSON contains benchmarks
+        print(f"\nJSON export includes full model benchmarking metrics")
+        
     except ValueError as ve:
         print(f"\n--- Execution Failed (ValueError) ---")
         print(ve)
