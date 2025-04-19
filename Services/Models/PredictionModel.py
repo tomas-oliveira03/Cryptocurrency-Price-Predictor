@@ -55,46 +55,67 @@ class PredictionModel:
         # Step 3: Engineer features
         featuresDF = engineFeatures.engineFeatures(self, processedData)
         
-        # Step 4: Train LSTM model using all data except the last 7 days for testing
-        print("\n--- Training LSTM Model (Testing on Last 7 Days) ---")
+        # Step 4: Train LSTM model (Initial training)
+        print("\n--- Training Initial LSTM Model ---")
         
         # Use a smaller sequence length if dataset is smaller
         seq_length = min(10, len(featuresDF) // 5)  # Adjust sequence length based on data size
         if seq_length < 1: seq_length = 1 # Ensure seq_length is at least 1
-        
-        test_days_for_training = 7 # Use last 7 days for testing during training
-
-        # Check if we have enough data for the test split + sequence length
-        min_data_needed = test_days_for_training + seq_length + 1 # +1 for the target shift
-        if len(featuresDF) < min_data_needed:
-             raise ValueError(f"Not enough historical data ({len(featuresDF)} days) to train and test with seq_length={seq_length} and test_days={test_days_for_training}. Need at least {min_data_needed} days.")
 
         lstm_results = lstmModel.trainLstmModel(
             featuresDF,
             target_column='close',
             forecast_days=1, # Typically train LSTM for 1-step ahead prediction
-            test_days=test_days_for_training,   # Use last 7 days for testing
+            test_size=0.2,   # Use a portion for validation during training
             seq_length=seq_length
         )
+        
+        print("\nLSTM Model Initial Training Metrics:")
+        for metric, value in lstm_results['metrics'].items():
+            print(f"  {metric.upper()}: {value:.4f}")
             
-        # Step 5: Predict Future with the Trained LSTM Model
+            
+            
+            
+        # Step 5: Retrain LSTM on full dataset for final model
+        print("\n--- Retraining LSTM Model on Full Historical Data ---")
+        
+        # Retrain LSTM on the entire dataset
+        retrain_seq_length = min(10, len(featuresDF) // 10)
+        if retrain_seq_length < 1: retrain_seq_length = 1
+
+        final_lstm_model = lstmModel.trainLstmModel(
+            featuresDF, # Use full dataset
+            target_column='close',
+            forecast_days=1,  # Still 1-step ahead prediction
+            test_size=0.01,   # Minimal test set for final training
+            seq_length=retrain_seq_length
+        )
+        print("LSTM retrained successfully on full data.")
+
+        # Step 6: Predict Future with LSTM
         print(f"\n--- Predicting Next {forcastDays} Days using LSTM Model ---")
 
         future_predictions = lstmModel.predictWithLstm(
-            lstm_results, # Use the model trained in the previous step
+            final_lstm_model,
             featuresDF,
             days=forcastDays
         )
 
-        # Calculate overall prediction trend
-        overall_change_pct = 0.0
-        if not future_predictions.empty and not featuresDF.empty:
-            last_hist_price = featuresDF['close'].iloc[-1]
-            last_pred_price = future_predictions['predicted_price'].iloc[-1]
-            if last_hist_price != 0:
-                overall_change_pct = ((last_pred_price - last_hist_price) / last_hist_price) * 100
-            else:
-                overall_change_pct = float('inf') if last_pred_price > 0 else 0.0 # Handle division by zero
+        # Step 7: Output Results
+        # Print detailed prediction information
+        print("\nDetailed Future Price Predictions:")
+        if not future_predictions.empty:
+            for date, row in future_predictions.iterrows():
+                print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f}")
+            
+            # Calculate overall prediction trend
+            first_pred = future_predictions['predicted_price'].iloc[0]
+            last_pred = future_predictions['predicted_price'].iloc[-1]
+            total_change_pct = ((last_pred - first_pred) / first_pred) * 100 if first_pred != 0 else 0
+            print(f"\nOverall {forcastDays}-day prediction trend: {total_change_pct:+.2f}%")
+        else:
+            print("  No future predictions were generated.")
 
         # Visualize final predictions
         print("\nCreating final prediction visualization...")
@@ -148,11 +169,10 @@ class PredictionModel:
         # Return results dictionary
         results_dict = {
             "features": featuresDF,
-            "lstm_results": lstm_results, # This now holds the final trained model and its metrics
+            "lstm_results": lstm_results,
             "predictions": future_predictions,
             "json_export_path": json_export_path,
-            "forcastDays": forcastDays,
-            "overall_change_pct": overall_change_pct # Add the calculated percentage change
+            "forcastDays": forcastDays
         }
             
         return results_dict
@@ -174,10 +194,9 @@ if __name__ == "__main__":
 
         # Access config values from the results dictionary
         fc_days = results.get('forcastDays', 'N/A')
-        overall_change = results.get('overall_change_pct', None)
 
         print(f"Model used: LSTM")
-        print("LSTM Model Metrics (Tested on Last 7 Days):") # Updated description
+        print("LSTM Model Metrics:")
         lstm_metrics = results.get('lstm_results', {}).get('metrics', {})
         for metric, value in lstm_metrics.items():
             print(f"  {metric.upper()}: {value:.4f}")
@@ -185,17 +204,6 @@ if __name__ == "__main__":
         print(f"Predictions saved to CSV and JSON: {results.get('json_export_path')}")
         print(f"Final {fc_days}-day Predictions:")
         print(results.get('predictions', pd.DataFrame()))
-
-        # Print the overall trend
-        if overall_change is not None:
-            direction = "increase" if overall_change >= 0 else "decrease"
-            if overall_change == float('inf'):
-                 print(f"\nOverall Trend: Price predicted to increase significantly from zero.")
-            else:
-                 print(f"\nOverall Trend: {abs(overall_change):.2f}% {direction} from last known price over the next {fc_days} days.")
-        else:
-            print("\nOverall Trend: Could not be calculated.")
-
     except ValueError as ve:
         print(f"\n--- Execution Failed (ValueError) ---")
         print(ve)
