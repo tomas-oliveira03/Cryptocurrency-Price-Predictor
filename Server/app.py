@@ -1,9 +1,10 @@
 import threading
+import time
 from flask import Flask
 from flask_cors import CORS
 from routers.index import registerRoutes
 from dotenv import load_dotenv
-from websockets.ws import createWebSocket
+from webSockets.WebSocketManager import WebSocketManager
 
 def create_app():
     # Load environment variables
@@ -23,15 +24,24 @@ def create_app():
     })
     
     # Configure WebSocket client
-    socketio = createWebSocket(app)
+    wsManager = WebSocketManager(app)
 
     # Register routes from external module
     registerRoutes(app, "/api")
 
-    return app, socketio
+    return app, wsManager
+
+
+def delayed_broadcast(wsManager):
+    time.sleep(10)
+    print("Sent")
+    wsManager.broadcast('Bitcoin', 50000)
 
 
 if __name__ == '__main__':
-    app, socketio = create_app()
+    app, wsManager = create_app()
     
-    socketio.run(app, host='0.0.0.0', port=3001)
+    # Start the broadcast thread
+    threading.Thread(target=delayed_broadcast, args=(wsManager,), daemon=True).start()
+    
+    wsManager.run(app)
