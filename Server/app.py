@@ -15,13 +15,11 @@ def create_app():
     app.config['DEBUG'] = False
     
     # Configure CORS
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": [
-                "http://localhost:5173",
-                "http://127.0.0.1:5173"
-            ]
-        }
+    CORS(app, resources={ 
+        r"/api/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173", 
+                              "http://localhost:3001", "http://127.0.0.1:3001"]},
+        r"/socket.io/*": {"origins": ["http://localhost:5173", "http://127.0.0.1:5173",
+                                     "http://localhost:3001", "http://127.0.0.1:3001"]}
     })
     
     # Configure WebSocket client
