@@ -1,8 +1,14 @@
+import threading
 from flask import Flask
 from flask_cors import CORS
 from routers.index import registerRoutes
+from dotenv import load_dotenv
+from websockets.ws import createWebSocket
 
 def create_app():
+    # Load environment variables
+    load_dotenv()
+    
     app = Flask(__name__)
 
     # Basic config
@@ -17,12 +23,17 @@ def create_app():
             ]
         }
     })
+    
+    # Configure WebSocket client
+    socketio = createWebSocket(app)
 
     # Register routes from external module
     registerRoutes(app, "/api")
 
-    return app
+    return app, socketio
+
 
 if __name__ == '__main__':
-    app = create_app()
-    app.run(host='0.0.0.0', port=3001)
+    app, socketio = create_app()
+    
+    socketio.run(app, host='0.0.0.0', port=3001)
