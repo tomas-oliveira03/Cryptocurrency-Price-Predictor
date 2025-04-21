@@ -217,50 +217,58 @@ class PredictionModel:
 
 if __name__ == "__main__":
     try:
-        predictionModel = PredictionModel()
+
         
         # --- Configuration ---
-        cryptoCoin = "BTC"
         forcastDays = 7   # Days to predict into the future
         initialFetchDays = 365 * 2 # Fetch ample history initially (e.g., 2 years)
         # -------------------
         
-        results = predictionModel.runEverything(cryptoCoin, forcastDays, initialFetchDays)
+        # Get the list of top coins
+        coins = ['BTC', 'ETH', 'XRP', 'BNB', 'SOL', 'DOGE', 'TRX', 'ADA']
         
-        print("\n--- Final Results Summary ---")
-
-        # Access config values from the results dictionary
-        fc_days = results.get('forcastDays', 'N/A')
-
-        print(f"Model used: LSTM")
-        print("LSTM Model Metrics:")
-        lstm_metrics = results.get('lstm_results', {}).get('metrics', {})
-        for metric, value in lstm_metrics.items():
-            print(f"  {metric.upper()}: {value:.4f}")
+        for cryptoCoin in coins:
+            print(f"\n\n{'='*50}")
+            print(f"Running prediction model for {cryptoCoin}")
+            print(f"{'='*50}\n")
             
-        # Add metrics evaluation
-        r2 = lstm_metrics.get('r2', 0)
-        mape = lstm_metrics.get('mape', 0)
-        print("\nMetrics Evaluation:")
-        if r2 > 0.5:
-            print(f"  R² of {r2:.4f} shows the model has moderate predictive power")
-        else:
-            print(f"  R² of {r2:.4f} suggests the model has limited predictive power")
+            predictionModel = PredictionModel()
+            results = predictionModel.runEverything(cryptoCoin, forcastDays, initialFetchDays)
             
-        if mape < 5:
-            print(f"  MAPE of {mape:.4f}% indicates relatively accurate predictions")
-        elif mape < 10:
-            print(f"  MAPE of {mape:.4f}% indicates acceptable prediction accuracy")
-        else:
-            print(f"  MAPE of {mape:.4f}% indicates high prediction errors")
-
-        print(f"\nPredictions saved to CSV and JSON: {results.get('json_export_path')}")
-        print(f"Final {fc_days}-day Predictions:")
-        print(results.get('predictions', pd.DataFrame()))
-        
-        # Print confirmation that JSON contains benchmarks
-        print(f"\nJSON export includes full model benchmarking metrics")
-        
+            print("\n--- Final Results Summary for", cryptoCoin, "---")
+            
+            # Access config values from the results dictionary
+            fc_days = results.get('forcastDays', 'N/A')
+    
+            print(f"Model used: LSTM")
+            print("LSTM Model Metrics:")
+            lstm_metrics = results.get('lstm_results', {}).get('metrics', {})
+            for metric, value in lstm_metrics.items():
+                print(f"  {metric.upper()}: {value:.4f}")
+                
+            # Add metrics evaluation
+            r2 = lstm_metrics.get('r2', 0)
+            mape = lstm_metrics.get('mape', 0)
+            print("\nMetrics Evaluation:")
+            if r2 > 0.5:
+                print(f"  R² of {r2:.4f} shows the model has moderate predictive power")
+            else:
+                print(f"  R² of {r2:.4f} suggests the model has limited predictive power")
+                
+            if mape < 5:
+                print(f"  MAPE of {mape:.4f}% indicates relatively accurate predictions")
+            elif mape < 10:
+                print(f"  MAPE of {mape:.4f}% indicates acceptable prediction accuracy")
+            else:
+                print(f"  MAPE of {mape:.4f}% indicates high prediction errors")
+    
+            print(f"\nPredictions saved to CSV and JSON: {results.get('json_export_path')}")
+            print(f"Final {fc_days}-day Predictions:")
+            print(results.get('predictions', pd.DataFrame()))
+            
+            # Print confirmation that JSON contains benchmarks
+            print(f"\nJSON export includes full model benchmarking metrics")
+            
     except ValueError as ve:
         print(f"\n--- Execution Failed (ValueError) ---")
         print(ve)

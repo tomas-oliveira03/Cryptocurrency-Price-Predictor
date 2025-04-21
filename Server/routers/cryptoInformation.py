@@ -9,8 +9,11 @@ def getCryptoData(app, prefix):
     @app.route(f"{prefix}/<cryptoCurrency>")
     def getCryptoInformation(cryptoCurrency):
         
-        cryptoData = predictionsDB.find_one({"coin": cryptoCurrency})
-        
+        cryptoData = predictionsDB.find_one(
+            {"coin": cryptoCurrency},
+            sort=[("date", -1)]
+        )
+                
         if not cryptoData:
             return jsonify({"error": "CryptoCurrency not found"}), 404
         
