@@ -39,7 +39,7 @@ class CryptoPriceAgent(Agent):
                             # print(f"Waiting {delay} seconds to align with next 10-minute mark.")
                             # await asyncio.sleep(delay)
                             
-                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=CronExpression.EVERY_10_MINUTES.value)
+                            periodicJobBehavior = self.agent.PeriodicPriceCheck(period=CronExpression.EVERY_MINUTE.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
                     case _:
