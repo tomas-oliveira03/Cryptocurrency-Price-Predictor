@@ -4,6 +4,7 @@ import os
 import sys
 from bson import CodecOptions
 from dotenv import load_dotenv
+from flask import json
 from pymongo import MongoClient, UpdateOne
 import requests
 
@@ -47,6 +48,39 @@ class CryptoPrice:
                     
             databaseInfo = self.saveToMongo(finalResults)
             if self.SHOW_LOGS: print("Crypto prices data saved to MongoDB successfully.")
+            
+            # Send Webhook to notify frontend
+            url = "http://localhost:3001/api/crypto/update"
+            
+            modifiedResults = []
+
+            for result in finalResults:
+                modifiedResult = {
+                    "coin": result["cryptoCurrency"],  
+                    "price": result["price"]           
+                }
+                modifiedResults.append(modifiedResult)
+            
+            payload = modifiedResults
+            rawPayload = json.dumps(payload)
+            
+            try:
+                # Send the POST request with a timeout of 10 seconds
+                response = requests.post(url, data=rawPayload)
+
+                # Check if the response status code indicates success
+                if response.status_code == 200:
+                    if self.SHOW_LOGS:
+                        print("Status:", response.status_code)
+                        print("Response:", response.text)
+                else:
+                    if self.SHOW_LOGS:
+                        print(f"Error: Received status code {response.status_code}")
+                        print("Response:", response.text)
+
+            except requests.exceptions.RequestException as e:
+                if self.SHOW_LOGS:
+                    print(f"Error: Request failed - {e}")
             return databaseInfo
             
         else:
