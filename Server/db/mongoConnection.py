@@ -12,5 +12,6 @@ def getMongoConnection():
     
     # Get commonly used collections
     predictionsDB = mongoClient['ASM'].get_collection('predictions', codec_options=CodecOptions(tz_aware=True))
+    cryptoPriceDB = mongoClient['ASM'].get_collection('crypto-price', codec_options=CodecOptions(tz_aware=True))
     
-    return predictionsDB
+    return predictionsDB, cryptoPriceDB
