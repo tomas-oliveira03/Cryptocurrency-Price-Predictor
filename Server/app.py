@@ -32,10 +32,10 @@ def create_app():
     return app, wsManager
 
 
-def delayed_broadcast(wsManager):
-    time.sleep(10)
+def delayed_broadcast(wsManager):   
+    time.sleep(3)
     print("Sent")
-    wsManager.broadcast('Bitcoin', 50000)
+    wsManager.broadcast('BTC', 123)
 
 
 if __name__ == '__main__':
@@ -43,5 +43,4 @@ if __name__ == '__main__':
     
     # Start the broadcast thread
     threading.Thread(target=delayed_broadcast, args=(wsManager,), daemon=True).start()
-    
     wsManager.run(app)
