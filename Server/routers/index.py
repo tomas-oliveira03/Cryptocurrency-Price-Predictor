@@ -3,7 +3,7 @@ from datetime import datetime
 from utils.logger import logger  
 from routers.cryptoInformation import getCryptoData
 
-def registerRoutes(app, path):
+def registerRoutes(app, path, wsManager):
     # Optional: Request timing
     @app.before_request
     def before_request():
@@ -17,4 +17,4 @@ def registerRoutes(app, path):
         return response
 
     # Register specialist agent routes
-    getCryptoData(app, prefix=f"{path}/crypto/")
+    getCryptoData(app, f"{path}/crypto/", wsManager)

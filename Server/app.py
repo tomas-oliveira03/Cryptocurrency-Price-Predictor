@@ -27,20 +27,11 @@ def create_app():
     wsManager = WebSocketManager(app)
 
     # Register routes from external module
-    registerRoutes(app, "/api")
+    registerRoutes(app, "/api", wsManager)
 
     return app, wsManager
 
 
-def delayed_broadcast(wsManager):   
-    time.sleep(3)
-    print("Sent")
-    wsManager.broadcast('BTC', 123)
-
-
 if __name__ == '__main__':
     app, wsManager = create_app()
-    
-    # Start the broadcast thread
-    threading.Thread(target=delayed_broadcast, args=(wsManager,), daemon=True).start()
     wsManager.run(app)

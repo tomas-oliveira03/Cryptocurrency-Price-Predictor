@@ -26,10 +26,10 @@ class WebSocketManager:
                 self.connected_clients.remove(request.sid)
             print(f"Connected clients: {self.connected_clients}")
 
-    def broadcast(self, coin, price):
+    def broadcast(self, data):
         """Send a message to all connected clients."""
         for sid in self.connected_clients:
-            self.socketio.emit('message', {'coin': coin, 'price': price}, room=sid)
+            self.socketio.emit('message', data, room=sid)
 
     def run(self, app, host='0.0.0.0', port=3001):
         self.socketio.run(app, host=host, port=port)
