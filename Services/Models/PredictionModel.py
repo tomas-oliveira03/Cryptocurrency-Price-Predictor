@@ -1,4 +1,5 @@
 import os
+import sys
 import pandas as pd
 import numpy as np
 from bson import CodecOptions
@@ -6,15 +7,17 @@ from pymongo import MongoClient
 import json
 import random
 import tensorflow as tf
-import fetchData
-import preProcessor
-import engineFeatures
-from visualizePredictions import visualize_predictions
-import lstmModel 
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Models.fetchData import getDataForPrediction
+from Models.preProcessor import preprocessData
+from Models.engineFeatures import engineFeatures
+from Models.visualizePredictions import visualize_predictions
+from Models.lstmModel import trainLstmModel, predictWithLstm
 
 class PredictionModel:
-    def __init__(self):
-        
+    def __init__(self, SHOW_LOGS=True):
+        self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         if not mongoDBURI:
             raise ValueError("Please set the MONGODB_URI environment variable first.")
@@ -43,13 +46,13 @@ class PredictionModel:
 
 
         # Step 1: Get raw data for prediction
-        rawData = fetchData.getDataForPrediction(self, cryptoCoin=cryptoCoin, numberOfPastDaysOfData=initialFetchDays)
+        rawData = getDataForPrediction(self, cryptoCoin=cryptoCoin, numberOfPastDaysOfData=initialFetchDays)
         
         # Step 2: Preprocess the data
-        processedData = preProcessor.preprocessData(self, rawData)
+        processedData = preprocessData(self, rawData)
         
         # Step 3: Engineer features
-        featuresDF = engineFeatures.engineFeatures(self, processedData)
+        featuresDF = engineFeatures(self, processedData)
         
         # Step 4: Train LSTM model (Initial training)
         print("\n--- Training Initial LSTM Model ---")
@@ -58,7 +61,7 @@ class PredictionModel:
         seq_length = min(10, len(featuresDF) // 5)  # Adjust sequence length based on data size
         if seq_length < 1: seq_length = 1 # Ensure seq_length is at least 1
 
-        lstm_results = lstmModel.trainLstmModel(
+        lstm_results = trainLstmModel(
             featuresDF,
             target_column='close',
             forecast_days=1, # Typically train LSTM for 1-step ahead prediction
@@ -73,7 +76,7 @@ class PredictionModel:
         retrain_seq_length = min(10, len(featuresDF) // 10)
         if retrain_seq_length < 1: retrain_seq_length = 1
 
-        final_lstm_model = lstmModel.trainLstmModel(
+        final_lstm_model = trainLstmModel(
             featuresDF, # Use full dataset
             target_column='close',
             forecast_days=1,  # Still 1-step ahead prediction
@@ -85,7 +88,7 @@ class PredictionModel:
         # Step 6: Predict Future with LSTM
         print(f"\n--- Predicting Next {forcastDays} Days using LSTM Model ---")
 
-        future_predictions = lstmModel.predictWithLstm(
+        future_predictions = predictWithLstm(
             final_lstm_model,
             featuresDF,
             days=forcastDays

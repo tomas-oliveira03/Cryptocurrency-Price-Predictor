@@ -1,8 +1,5 @@
 from datetime import datetime, timedelta
 
-import pandas as pd
-
-
 def getFearGreedData(self, startDate=None, endDate=None):
     query = {}
     

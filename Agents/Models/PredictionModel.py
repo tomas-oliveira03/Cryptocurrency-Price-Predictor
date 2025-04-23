@@ -5,6 +5,7 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression
+from Services.Models.PredictionModel import PredictionModel
 
 # FOR DEBUGGING ONLY
 AGENT_NAME = f"\033[38;5;88m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
@@ -14,10 +15,10 @@ class PredictionModelAgent(Agent):
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        # self.predictionModel = PredictionModel(SHOW_LOGS=False)
+        self.predictionModel = PredictionModel(SHOW_LOGS=False)
         self.isJobRunning = False
-        self.queue = asyncio.Queue()
         self.isFirstTime = True
+        self.queue = asyncio.Queue()
 
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -50,13 +51,13 @@ class PredictionModelAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic prediction model...")
             
-            if self.agent.isFirstTime: 
-                self.agent.isFirstTime = False  
-                return
+            # if self.agent.isFirstTime: 
+            #     self.agent.isFirstTime = False  
+            #     return
             
-            if self.agent.queue.empty():
-                print(f"{AGENT_NAME} No new data — skipping prediction job.")
-                return
+            # if self.agent.queue.empty():
+            #     print(f"{AGENT_NAME} No new data — skipping prediction job.")
+            #     return
             
             try:
                 # Clear the queue
@@ -68,8 +69,13 @@ class PredictionModelAgent(Agent):
                         pass
                 
                 loop = asyncio.get_event_loop()
-                # numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
-                # print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
+                
+                coins = ['BTC', 'ETH', 'XRP', 'BNB', 'SOL', 'DOGE', 'TRX', 'ADA']
+                
+                for coin in coins:
+                    await loop.run_in_executor(None, self.agent.predictionModel.runEverything, coin, 7, 365 * 2)
+                    
+                print(f"{AGENT_NAME} New prediction made...")
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
