@@ -26,6 +26,9 @@ class GlobalOrchestratorAgent(Agent):
             print(f"{AGENT_NAME} Notifying DataAnalysisOrchestrator Agent to start...")
             await sendMessage(self, "dataAnalysisOrchestrator", "start_agent")
             
+            print(f"{AGENT_NAME} Notifying PredictionModel Agent to start...")
+            await sendMessage(self, "predictionModel", "start_agent")
+            
             
     class ReceiveRequestBehav(CyclicBehaviour):
         async def run(self):
@@ -42,11 +45,11 @@ class GlobalOrchestratorAgent(Agent):
                             print(f"{AGENT_NAME} \033[91mERROR\033[0m Message does not provide intended criteria. Invalid payload arguments.")
                             return
                         
+                        print(f"{AGENT_NAME} New data available {payload.toString()}")
                         if databaseCollectionName == "crypto-price":
-                            print(f"{AGENT_NAME} Not sending {databaseCollectionName} data to CryptoOrchestrator Agent.")
                             return
                             
-                        print(f"{AGENT_NAME} New data available to send to prediction model. {payload.toString()}")
+                        await sendMessage(self, "predictionModel", "prediction_request", payload)
                 
                     case _:
                         print(f"{AGENT_NAME} Invalid message performative received: {performativeReceived}")

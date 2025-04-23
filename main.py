@@ -9,6 +9,7 @@ from Agents.Crypto.CryptoPrice import CryptoPriceAgent
 from Agents.Crypto.DetailedCryptoData import DetailedCryptoDataAgent
 from Agents.Crypto.FearGreedIndex import FearGreedIndexAgent
 from Agents.DataAnalysis.CoinIdentifier import CoinIdentifierAgent
+from Agents.Models.PredictionModel import PredictionModelAgent
 from Agents.News.Articles import ArticlesAgent
 from Agents.News.Forum import ForumAgent
 from Agents.News.Reddit import RedditAgent
@@ -44,8 +45,12 @@ async def main():
     articlesAgent = ArticlesAgent(f"articlePosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     forumAgent = ForumAgent(f"forumPosts@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
+    predictionModelAgent = PredictionModelAgent(f"predictionModel@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    
     
     # Start agents
+    await predictionModelAgent.start(auto_register=True)
+    
     await sentimentAnalysisAgent.start(auto_register=True)
     await coinIdentifierAgent.start(auto_register=True)
     

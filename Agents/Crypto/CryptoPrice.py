@@ -33,12 +33,7 @@ class CryptoPriceAgent(Agent):
                             print(f"{AGENT_NAME} Job already running, skipping start request...")
                             
                         else:
-                            self.agent.isJobRunning = True
-                            
-                            # delay = getSecondsUntilNextAlignedMark(CronExpression.EVERY_10_MINUTES)
-                            # print(f"Waiting {delay} seconds to align with next 10-minute mark.")
-                            # await asyncio.sleep(delay)
-                            
+                            self.agent.isJobRunning = True                            
                             periodicJobBehavior = self.agent.PeriodicPriceCheck(period=CronExpression.EVERY_MINUTE.value)
                             self.agent.add_behaviour(periodicJobBehavior)
                 
