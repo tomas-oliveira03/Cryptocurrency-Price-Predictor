@@ -2,6 +2,7 @@ from flask import request
 from datetime import datetime
 from utils.logger import logger  
 from routers.cryptoInformation import getCryptoData
+from routers.auth import authentication 
 
 def registerRoutes(app, path, wsManager):
     # Optional: Request timing
@@ -18,3 +19,4 @@ def registerRoutes(app, path, wsManager):
 
     # Register specialist agent routes
     getCryptoData(app, f"{path}/crypto/", wsManager)
+    authentication(app, f"{path}/auth/")

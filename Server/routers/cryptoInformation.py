@@ -1,11 +1,11 @@
 import datetime
 from flask import json, jsonify, request
 
-from db.mongoConnection import getMongoConnection
+from db.mongoConnection import getMongoConnectionForCrypto
 
 def getCryptoData(app, prefix, wsManager):
     
-    predictionsDB, cryptoPriceDB = getMongoConnection()
+    predictionsDB, cryptoPriceDB = getMongoConnectionForCrypto()
     
     @app.route(f"{prefix}/<cryptoCurrency>")
     def getCryptoInformation(cryptoCurrency):
