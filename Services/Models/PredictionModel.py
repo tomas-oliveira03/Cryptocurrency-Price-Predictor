@@ -12,8 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Models.fetchData import getDataForPrediction
 from Models.preProcessor import preprocessData
 from Models.engineFeatures import engineFeatures
-from Models.visualizePredictions import visualize_predictions
 from Models.lstmModel import trainLstmModel, predictWithLstm
+from Models.benchmark import coinBenchmark
 
 class PredictionModel:
     def __init__(self, SHOW_LOGS=True):
@@ -27,12 +27,14 @@ class PredictionModel:
         
         self.cryptoFearGreedDB = mongoClient['ASM'].get_collection('crypto-fear-greed', codec_options=CodecOptions(tz_aware=True))
         self.detailedCryptoData = mongoClient['ASM'].get_collection('detailed-crypto-data', codec_options=CodecOptions(tz_aware=True))
+        self.cryptoPriceDB = mongoClient['ASM'].get_collection('crypto-price', codec_options=CodecOptions(tz_aware=True))
         
         self.redditDB = mongoClient['ASM'].get_collection('reddit', codec_options=CodecOptions(tz_aware=True))
         self.forumDB = mongoClient['ASM'].get_collection('forum', codec_options=CodecOptions(tz_aware=True))
         self.articlesDB = mongoClient['ASM'].get_collection('articles', codec_options=CodecOptions(tz_aware=True))
         
         self.predictionsDB = mongoClient['ASM'].get_collection('predictions', codec_options=CodecOptions(tz_aware=True))
+        
             
         
 
@@ -109,27 +111,6 @@ class PredictionModel:
         else:
             print("  No future predictions were generated.")
 
-        # Visualize final predictions
-        print("\nCreating final prediction visualization...")
-        sentiment_col = 'pct_positive' if 'pct_positive' in featuresDF.columns else None
-        sentiment_plot_data = featuresDF[[sentiment_col]] if sentiment_col and sentiment_col in featuresDF.columns else None
-        
-        visualize_predictions(
-            featuresDF[['close']],
-            future_predictions,
-            sentiment_data=sentiment_plot_data,
-            save_path=f"{dataDir}/crypto_price_prediction_lstm_{forcastDays}d.png"
-        )
-
-        # Save predictions to CSV
-        predictions_csv = f"{dataDir}/price_predictions_lstm_{forcastDays}d.csv"
-        future_predictions.to_csv(predictions_csv)
-        print(f"Final predictions saved to {predictions_csv}")
-
-        # Generate and save JSON data export
-        print("\nGenerating JSON data export...")
-        json_export_path = os.path.join(dataDir, f"{cryptoCoin}_data_export_lstm_{forcastDays}d.json")
-
         historical_price_data = [
             {"date": date.strftime('%Y-%m-%d'), "price": price}
             for date, price in featuresDF['close'].items()
@@ -150,6 +131,8 @@ class PredictionModel:
         # Extract model benchmarking results
         model_metrics = lstm_results['metrics']
         
+        coinBenchmarkData = coinBenchmark(cryptoCoin, self.predictionsDB, self.cryptoPriceDB)
+        
         json_data = {
             "coin": cryptoCoin,
             "historical_price": historical_price_data,
@@ -161,22 +144,17 @@ class PredictionModel:
                 "mae": model_metrics.get('mae', 0),
                 "r2": model_metrics.get('r2', 0),
                 "mape": model_metrics.get('mape', 0)
-            }
+            },
+            "prediction_benchmarks": coinBenchmarkData
         }
-
-        # Save the JSON data to a file
-        with open(json_export_path, 'w') as f:
-            json.dump(json_data, f, indent=2)
-        print(f"JSON data export saved to {json_export_path}")
         
         self.saveToMongo(json_data)
-
+        
         # Return results dictionary
         results_dict = {
             "features": featuresDF,
             "lstm_results": lstm_results,
             "predictions": future_predictions,
-            "json_export_path": json_export_path,
             "json_data": json_data,  # Add the actual JSON data to the results
             "forcastDays": forcastDays
         }
@@ -265,7 +243,6 @@ if __name__ == "__main__":
             else:
                 print(f"  MAPE of {mape:.4f}% indicates high prediction errors")
     
-            print(f"\nPredictions saved to CSV and JSON: {results.get('json_export_path')}")
             print(f"Final {fc_days}-day Predictions:")
             print(results.get('predictions', pd.DataFrame()))
             
