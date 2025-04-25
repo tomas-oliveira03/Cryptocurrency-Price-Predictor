@@ -15,16 +15,12 @@ class WebSocketManager:
     def register_handlers(self):
         @self.socketio.on('connect')
         def handle_connect():
-            print('Client connected to WebSocket')
             self.connected_clients.append(request.sid)
-            print(f"Connected clients: {self.connected_clients}")
 
         @self.socketio.on('disconnect')
         def handle_disconnect():
-            print('Client disconnected from WebSocket')
             if request.sid in self.connected_clients:
                 self.connected_clients.remove(request.sid)
-            print(f"Connected clients: {self.connected_clients}")
 
     def broadcast(self, data):
         """Send a message to all connected clients."""

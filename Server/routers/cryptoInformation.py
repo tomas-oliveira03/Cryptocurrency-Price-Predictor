@@ -14,27 +14,12 @@ def getCryptoData(app, prefix, wsManager, predictionsDB, cryptoPriceDB):
             {"cryptoCurrency": cryptoCurrency},
             sort=[("date", -1)]
         )
-        
                 
-        if not cryptoData:
-            return jsonify({"error": "CryptoCurrency not found"}), 404
-        
-        sorted_prices = sorted(cryptoData["historical_price"], key=lambda x: x["date"])
-        
-        mostRecentCryptoData = sorted_prices[-1]
-        currentPrice = mostRecentCryptoData["date"]
-        
-        print(mostRecentCryptoData)
-        
-        if cryptoPrice:
-            print(cryptoPrice)
-            
-            if mostRecentCryptoData["date"] < cryptoPrice["date"]:
-                currentPrice=cryptoPrice["price"]
-            
+        if not cryptoData or not cryptoPrice:
+            return jsonify({"error": "Data not found"}), 404
         
         cryptoData["_id"] = str(cryptoData["_id"])
-        cryptoData["current_price"] = currentPrice
+        cryptoData["current_price"] = cryptoPrice["price"]
         return jsonify(cryptoData), 200
 
 
