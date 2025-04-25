@@ -29,7 +29,8 @@ def notification(app, prefix, userDB, notificatioDB):
                     "id": str(notification["_id"]),
                     "price": notification["price"],
                     "isActive": notification["isActive"],
-                    "type": notification["type"]
+                    "alertCondition": notification["alertCondition"],
+                    "monitoredPriceType": notification["monitoredPriceType"],
                 }
                 for notification in notifications
             ]
@@ -62,8 +63,9 @@ def notification(app, prefix, userDB, notificatioDB):
                 "_id": str(notification["_id"]),
                 "price": notification["price"],
                 "isActive": notification["isActive"],
-                "type": notification["type"]
-                }), 200
+                "alertCondition": notification["alertCondition"],
+                "monitoredPriceType": notification["monitoredPriceType"],
+            }), 200
 
         except Exception as e:
             return jsonify({"error": f"Failed to retrieve notification: {str(e)}"}), 500
@@ -118,8 +120,10 @@ def notification(app, prefix, userDB, notificatioDB):
                 update_fields["price"] = data["price"]
             if "isActive" in data:
                 update_fields["isActive"] = data["isActive"]
-            if "type" in data:
-                update_fields["type"] = data["type"]
+            if "alertCondition" in data:
+                update_fields["alertCondition"] = data["alertCondition"]
+            if "monitoredPriceType" in data:
+                update_fields["monitoredPriceType"] = data["monitoredPriceType"]
 
             if not update_fields:
                 return jsonify({"error": "No fields provided to update"}), 400
@@ -164,10 +168,11 @@ def notification(app, prefix, userDB, notificatioDB):
             coin = data.get("coin")
             price = data.get("price")
             isActive = data.get("isActive")
-            type = data.get("type")
+            alertCondition = data.get("alertCondition")
+            monitoredPriceType = data.get("monitoredPriceType")
 
-            if coin is None or price is None or isActive is None or type is None:
-                return jsonify({"error": "Missing one or more fields: coin, price, isActive, type"}), 400
+            if coin is None or price is None or isActive is None or alertCondition is None or monitoredPriceType is None:
+                return jsonify({"error": "Missing one or more fields: coin, price, isActive, alertCondition, monitoredPriceType"}), 400
 
             # Create and insert notification
             new_notification = {
@@ -175,7 +180,8 @@ def notification(app, prefix, userDB, notificatioDB):
                 "cryptoCurrency": coin,
                 "price": price,
                 "isActive": isActive,
-                "type": type
+                "alertCondition": alertCondition,
+                "monitoredPriceType": monitoredPriceType
             }
 
             result = notificatioDB.insert_one(new_notification)
