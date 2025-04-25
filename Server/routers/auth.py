@@ -1,9 +1,6 @@
 from flask import json, jsonify, request
-from db.mongoConnection import getMongoConnectionForUser
 
-def authentication(app, prefix):
-    
-    userDB = getMongoConnectionForUser()
+def authentication(app, prefix, userDB):
     
     @app.route(f"{prefix}/login", methods=["POST"])
     def login():

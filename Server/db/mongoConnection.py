@@ -27,5 +27,6 @@ def getMongoConnectionForUser():
     
     # Get commonly used collections
     userDB = mongoClient['ASM-Users'].get_collection('users', codec_options=CodecOptions(tz_aware=True))
+    notificationDB = mongoClient['ASM-Users'].get_collection('notifications', codec_options=CodecOptions(tz_aware=True))
     
-    return userDB
+    return userDB, notificationDB
