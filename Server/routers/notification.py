@@ -100,7 +100,7 @@ def notification(app, prefix, userDB, notificatioDB):
             return jsonify({"error": f"Failed to delete notification: {str(e)}"}), 500
         
         
-    @app.route(f"{prefix}/edit", methods=["POST"])
+    @app.route(f"{prefix}/edit", methods=["PATCH"])
     def editNotification():
         try:
             data = request.get_json()
@@ -173,6 +173,20 @@ def notification(app, prefix, userDB, notificatioDB):
 
             if coin is None or price is None or isActive is None or alertCondition is None or monitoredPriceType is None:
                 return jsonify({"error": "Missing one or more fields: coin, price, isActive, alertCondition, monitoredPriceType"}), 400
+
+
+             # Check for duplicate notification
+            existingNotification = notificatioDB.find_one({
+                "userId": userObjectId,
+                "cryptoCurrency": coin,
+                "price": price,
+                "isActive": isActive,
+                "alertCondition": alertCondition,
+                "monitoredPriceType": monitoredPriceType
+            })
+
+            if existingNotification:
+                return jsonify({"error": "An identical notification already exists"}), 409
 
             # Create and insert notification
             new_notification = {

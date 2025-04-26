@@ -51,9 +51,9 @@ class PredictionModelAgent(Agent):
         async def run(self):
             print(f"{AGENT_NAME} Running periodic prediction model...")
             
-            # if self.agent.isFirstTime: 
-            #     self.agent.isFirstTime = False  
-            #     return
+            if self.agent.isFirstTime: 
+                self.agent.isFirstTime = False  
+                return
             
             # if self.agent.queue.empty():
             #     print(f"{AGENT_NAME} No new data — skipping prediction job.")
