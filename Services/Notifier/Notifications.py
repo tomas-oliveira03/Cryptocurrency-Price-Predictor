@@ -67,10 +67,14 @@ class Notifications:
     def notifyUsers(self, aboveNotifications, belowNotifications, cryptoData):
         currentPrice = cryptoData["price"]
         coinName = cryptoData["coin"]
+        monitoredPriceType = cryptoData["monitoredPriceType"]
 
         for notification in aboveNotifications + belowNotifications:
             userEmail = notification.get("email")
             targetPrice = notification.get("price")
+            alertCondition = notification.get("alertCondition")
+            
+            # These are still calculated but won't be displayed in the email
             priceDifferential = currentPrice - targetPrice
             percentageChange = (priceDifferential / targetPrice) * 100
 
@@ -87,7 +91,10 @@ class Notifications:
                 currentPrice=currentPrice,
                 percentageChange=percentageChange,
                 priceDifferential=priceDifferential,
-                recipientEmail="tumabarbosa@gmail.com"
+                recipientEmail=userEmail, 
+                alertCondition=alertCondition,
+                targetPrice=targetPrice,
+                monitoredPriceType=monitoredPriceType
             )
 
 
