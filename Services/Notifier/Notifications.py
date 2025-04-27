@@ -1,15 +1,22 @@
 import os
 from bson import CodecOptions
-from pymongo import MongoClient, UpdateOne
+from dotenv import load_dotenv
+from pymongo import MongoClient
+from mailer import sendCryptoEmail
 
 class Notifications:
     
     def __init__(self, SHOW_LOGS=True):
+        load_dotenv()
         self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         
-        if not mongoDBURI:
-            raise ValueError("Please set the mongoDB environment variable first.")
+        self.senderEmail = os.getenv("GMAIL_USERNAME")
+        self.senderPassword = os.getenv("GMAIL_PASSWORD_SMTP")
+        self.smtpServer = os.getenv("SMTP_SERVER")
+        self.smtpPort = int(os.getenv("SMTP_PORT"))
+        if not mongoDBURI or not self.senderEmail or not self.senderPassword or not self.smtpServer or not self.smtpPort:
+            raise ValueError("Please set the environment variable first.")
 
         # Database connection
         mongoClient = MongoClient(mongoDBURI)
@@ -48,16 +55,42 @@ class Notifications:
                 
             elif alertCondition == "BELOW" and currentPrice < targetPrice:
                 belowNotifications.append(notification)
-
+                
         if self.SHOW_LOGS:
             print(f"Above Notifications to trigger: {aboveNotifications}")
             print(f"Below Notifications to trigger: {belowNotifications}")
 
-        return aboveNotifications, belowNotifications
+
+        self.notifyUsers(aboveNotifications, belowNotifications, cryptoData)
             
    
-    
-        
+    def notifyUsers(self, aboveNotifications, belowNotifications, cryptoData):
+        currentPrice = cryptoData["price"]
+        coinName = cryptoData["coin"]
+
+        for notification in aboveNotifications + belowNotifications:
+            userEmail = notification.get("email")
+            targetPrice = notification.get("price")
+            priceDifferential = currentPrice - targetPrice
+            percentageChange = (priceDifferential / targetPrice) * 100
+
+            if self.SHOW_LOGS:
+                print(f"Sending notification to {userEmail} for {coinName}")
+
+            sendCryptoEmail(
+                SHOW_LOGS=self.SHOW_LOGS,
+                senderEmail=self.senderEmail,
+                senderPassword=self.senderPassword,
+                smtpServer=self.smtpServer,
+                smtpPort=self.smtpPort,
+                coinName=coinName,
+                currentPrice=currentPrice,
+                percentageChange=percentageChange,
+                priceDifferential=priceDifferential,
+                recipientEmail="tumabarbosa@gmail.com"
+            )
+
+
 if __name__ == "__main__":
     notifications = Notifications()
     
