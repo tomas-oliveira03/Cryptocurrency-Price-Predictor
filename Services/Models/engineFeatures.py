@@ -5,7 +5,6 @@ import numpy as np
 def engineFeatures(self, processedData):
     # Check if we have price data (required)
     if processedData["price_df"].empty:
-        print("No price data available for feature engineering")
         return pd.DataFrame()
     
     # Start with the price data as our base

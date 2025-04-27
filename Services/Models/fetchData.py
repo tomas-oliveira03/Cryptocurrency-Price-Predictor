@@ -143,8 +143,6 @@ def getDataForPrediction(self, cryptoCoin=None, numberOfPastDaysOfData=30):
     startDate = datetime.now() - timedelta(days=numberOfPastDaysOfData)
     endDate = datetime.now() 
 
-    print(f"Fetching data from {startDate.strftime('%Y-%m-%d')} to {endDate.strftime('%Y-%m-%d')}")
-
     # Get data from all sources using the date range
     cryptoData = getCryptoPriceData(self, startDate=startDate, endDate=endDate, cryptoSymbol=cryptoCoin)
     fearGreedData = getFearGreedData(self, startDate=startDate, endDate=endDate)

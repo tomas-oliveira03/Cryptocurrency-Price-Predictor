@@ -55,9 +55,9 @@ class PredictionModelAgent(Agent):
                 self.agent.isFirstTime = False  
                 return
             
-            # if self.agent.queue.empty():
-            #     print(f"{AGENT_NAME} No new data — skipping prediction job.")
-            #     return
+            if self.agent.queue.empty():
+                print(f"{AGENT_NAME} No new data — skipping prediction job.")
+                return
             
             try:
                 # Clear the queue
