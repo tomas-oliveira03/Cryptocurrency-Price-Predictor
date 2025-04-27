@@ -204,6 +204,28 @@ def createCryptoEmailTemplate(coinName, currentPrice, alertCondition, targetPric
                 max-height: 80px;
                 margin-bottom: 10px;
             }}
+            .website-link {{
+                display: inline-block;
+                margin: 25px auto;
+                padding: 10px 24px;
+                background-color: #4a5568;
+                color: #ffffff !important; /* Enforced white color with !important */
+                text-decoration: none;
+                border-radius: 6px;
+                font-weight: 600;
+                font-size: 16px;
+                transition: all 0.2s;
+                text-align: center;
+                text-shadow: none;
+            }}
+            .website-link:hover {{
+                background-color: #2d3748;
+                color: #ffffff !important; /* Enforced white text on hover */
+            }}
+            .dashboard-container {{
+                text-align: center;
+                margin: 30px 0;
+            }}
         </style>
     </head>
     <body>
@@ -231,6 +253,10 @@ def createCryptoEmailTemplate(coinName, currentPrice, alertCondition, targetPric
                     <div class="price-label">Your Target</div>
                     <div class="price-value">${targetPrice:,.2f}</div>
                 </div>
+            </div>
+            
+            <div class="dashboard-container">
+                <a href="http://localhost:5173/" class="website-link" style="color: #ffffff !important;">Visit Dashboard</a>
             </div>
             
             <div class="footer">
