@@ -68,8 +68,18 @@ def createCryptoEmailTemplate(coinName, currentPrice, alertCondition, targetPric
     condition_text = "above" if alertCondition == "ABOVE" else "below"
     price_type = "Predicted" if monitoredPriceType == "PREDICTED" else "Real-Time"
     
+    # Calculate tomorrow's date
+    tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+    tomorrow_formatted = tomorrow.strftime('%A, %B %d')  # e.g., "Monday, January 15"
+    
     # Alert message
     alert_message = f"Your {price_type} price alert for {coinName} has been triggered."
+    
+    # Create different alert type message based on price type
+    if monitoredPriceType == "PREDICTED":
+        alert_type_message = f"Our prediction indicates that on {tomorrow_formatted} it will reach ${currentPrice:,.2f}, {condition_text} your target of ${targetPrice:,.2f}"
+    else:
+        alert_type_message = f"Price is now {condition_text} your target of ${targetPrice:,.2f}"
     
     # Logo HTML - only include if we have a logo
     logo_html = ""
@@ -208,7 +218,7 @@ def createCryptoEmailTemplate(coinName, currentPrice, alertCondition, targetPric
             <div class="coin-name">{coinName}</div>
             
             <div class="alert-type">
-                Price is now {condition_text} your target of ${targetPrice:,.2f}
+                {alert_type_message}
             </div>
             
             <div class="price-comparison">
