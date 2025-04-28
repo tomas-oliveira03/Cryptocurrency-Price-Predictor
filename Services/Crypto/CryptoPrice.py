@@ -81,7 +81,7 @@ class CryptoPrice:
             except requests.exceptions.RequestException as e:
                 if self.SHOW_LOGS:
                     print(f"Error: Request failed - {e}")
-            return databaseInfo
+            return modifiedResults
             
         else:
             raise Exception(f"Failed to fetch data: {response.status_code}")

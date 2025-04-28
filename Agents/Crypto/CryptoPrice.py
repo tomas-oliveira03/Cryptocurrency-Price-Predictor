@@ -2,6 +2,7 @@ import asyncio
 import os
 from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
+from Communication.PriceAlert import PriceAlert
 from Communication.InformJobEnded import InformJobEnded
 from Services.Crypto.CryptoPrice import CryptoPrice
 from Agents.utils.messageHandler import sendMessage
@@ -18,6 +19,7 @@ class CryptoPriceAgent(Agent):
         self.cryptoPrice = CryptoPrice(SHOW_LOGS=False)
         self.isJobRunning = False
         self.informJobEnded = InformJobEnded("crypto-price")
+        self.priceAlert = PriceAlert("REAL")
             
 
     class ReceiveRequestBehav(CyclicBehaviour):
@@ -46,11 +48,16 @@ class CryptoPriceAgent(Agent):
             print(f"{AGENT_NAME} Running periodic crypto price...")
             try:
                 loop = asyncio.get_event_loop()
-                numberOfInsertions = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
-                print(f"{AGENT_NAME} Crypto price data saved to MongoDB successfully. New insertions: {numberOfInsertions}, notifying CryptoOrchestrator...")
+                coinsInfo = await loop.run_in_executor(None, self.agent.cryptoPrice.fetchTopCoinsPrices)
                 
+                print(f"{AGENT_NAME} Got coins pricing information, notifying CryptoOrchestrator...")
                 await sendMessage(self, "cryptoOrchestrator", "job_finished", self.agent.informJobEnded)
-                                
+                
+                print(f"{AGENT_NAME} Sending coin information to NotifierAgent...")
+                self.agent.priceAlert.setAllCryptoPrices(coinsInfo)
+                await sendMessage(self, "notificationsAgent", "price_alert", self.agent.priceAlert)
+                self.agent.priceAlert.clearCryptoPrices()
+                
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
                 return

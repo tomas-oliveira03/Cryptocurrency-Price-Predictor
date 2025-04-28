@@ -13,6 +13,7 @@ from Agents.Models.PredictionModel import PredictionModelAgent
 from Agents.News.Articles import ArticlesAgent
 from Agents.News.Forum import ForumAgent
 from Agents.News.Reddit import RedditAgent
+from Agents.Notifications.Notifications import NotificationsAgent
 from Agents.Orchestrators.DataAnalysisOrchestrator import DataAnalysisOrchestratorAgent
 from Agents.Orchestrators.GlobalOrchestrator import GlobalOrchestratorAgent
 from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
@@ -47,8 +48,12 @@ async def main():
     
     predictionModelAgent = PredictionModelAgent(f"predictionModel@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
     
+    notificationsAgent = NotificationsAgent(f"notificationsAgent@{SPADE_DOMAIN}", SPADE_PASSWORD, SPADE_DOMAIN)
+    
     
     # Start agents
+    await notificationsAgent.start(auto_register=True)
+    
     await predictionModelAgent.start(auto_register=True)
     
     await sentimentAnalysisAgent.start(auto_register=True)

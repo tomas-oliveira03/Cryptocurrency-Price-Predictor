@@ -57,8 +57,6 @@ class DetailedCryptoDataAgent(Agent):
                 return
                 
             
-
-
     async def setup(self):
         print(f"{AGENT_NAME} Starting...")
         self.add_behaviour(self.ReceiveRequestBehav())
