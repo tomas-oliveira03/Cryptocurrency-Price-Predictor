@@ -1,8 +1,11 @@
 import os
+import sys
 from bson import CodecOptions
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from mailer import sendCryptoEmail
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Notifications.mailer import sendCryptoEmail
 
 class Notifications:
     
@@ -91,7 +94,7 @@ class Notifications:
                 currentPrice=currentPrice,
                 percentageChange=percentageChange,
                 priceDifferential=priceDifferential,
-                recipientEmail=userEmail,
+                recipientEmail="tumabarbosa@gmail.com",
                 alertCondition=alertCondition,
                 targetPrice=targetPrice,
                 monitoredPriceType=monitoredPriceType

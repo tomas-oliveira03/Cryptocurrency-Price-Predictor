@@ -2,6 +2,7 @@ import asyncio
 import os
 import jsonpickle
 from spade.agent import Agent
+from Communication.PriceAlert import PriceAlert
 from spade.behaviour import CyclicBehaviour, PeriodicBehaviour
 from Agents.utils.messageHandler import sendMessage
 from Agents.utils.cron import CronExpression
@@ -18,6 +19,7 @@ class PredictionModelAgent(Agent):
         self.predictionModel = PredictionModel(SHOW_LOGS=False)
         self.isJobRunning = False
         self.isFirstTime = True
+        self.priceAlert = PriceAlert("PREDICTED")
         self.queue = asyncio.Queue()
 
 
@@ -70,12 +72,18 @@ class PredictionModelAgent(Agent):
                 
                 loop = asyncio.get_event_loop()
                 
-                coins = ['BTC', 'ETH', 'XRP', 'BNB', 'SOL', 'DOGE', 'TRX', 'ADA']
+                forcastDays=7
+                initialFetchDays=365 * 2
                 
-                for coin in coins:
-                    await loop.run_in_executor(None, self.agent.predictionModel.runEverything, coin, 7, 365 * 2)
-                    
+                coinsInfo = await loop.run_in_executor(None, self.agent.predictionModel.runModelForEveryCrypto, forcastDays, initialFetchDays)
                 print(f"{AGENT_NAME} New prediction made...")
+                
+                print(f"{AGENT_NAME} Sending coin information to NotifierAgent...")
+                self.agent.priceAlert.setAllCryptoPrices(coinsInfo)
+                await sendMessage(self, "notifierAgent", "price_alert", self.agent.priceAlert)
+                self.agent.priceAlert.clearCryptoPrices()
+                
+                
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

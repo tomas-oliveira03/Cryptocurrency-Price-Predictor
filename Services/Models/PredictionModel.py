@@ -15,6 +15,8 @@ from Models.engineFeatures import engineFeatures
 from Models.lstmModel import trainLstmModel, predictWithLstm
 from Models.benchmark import coinBenchmark
 
+from utils.cryptoCoinsInfo import getTopCoins
+
 class PredictionModel:
     def __init__(self, SHOW_LOGS=True):
         self.SHOW_LOGS=SHOW_LOGS
@@ -35,18 +37,24 @@ class PredictionModel:
         
         self.predictionsDB = mongoClient['ASM'].get_collection('predictions', codec_options=CodecOptions(tz_aware=True))
         
+    
+    def runModelForEveryCrypto(self, forcastDays, initialFetchDays):
+        topCoins = getTopCoins()
+        allCoinsData = []
+        for coin in topCoins:
+            try:
+                coinData = self.runModelForCrypto(coin, forcastDays, initialFetchDays)
+                allCoinsData.append(coinData)
+            except Exception as e:
+                print(f"Error processing {coin}: {e}")
+                continue
             
+        return allCoinsData 
         
 
-    def runEverything(self, cryptoCoin, forcastDays, initialFetchDays):
+    def runModelForCrypto(self, cryptoCoin, forcastDays, initialFetchDays):
         self.setSeeding(42)
         
-        # Save raw feature data first
-        dataDir = "Services/Models/data"
-        if not os.path.exists(dataDir):
-            os.makedirs(dataDir)
-
-
         # Step 1: Get raw data for prediction
         rawData = getDataForPrediction(self, cryptoCoin=cryptoCoin, numberOfPastDaysOfData=initialFetchDays)
         
@@ -150,16 +158,14 @@ class PredictionModel:
         
         self.saveToMongo(json_data)
         
-        # Return results dictionary
-        results_dict = {
-            "features": featuresDF,
-            "lstm_results": lstm_results,
-            "predictions": future_predictions,
-            "json_data": json_data,  # Add the actual JSON data to the results
-            "forcastDays": forcastDays
-        }
+        cryptoCoinPredictionForNextDay = predicted_price_data[0]
             
-        return results_dict
+        result = {
+            "coin": cryptoCoin,
+            "price": cryptoCoinPredictionForNextDay["price"]
+        }
+        
+        return result
 
 
     def saveToMongo(self, data):
@@ -197,64 +203,14 @@ class PredictionModel:
 
 
 if __name__ == "__main__":
-    try:
 
-        
-        # --- Configuration ---
-        forcastDays = 7   # Days to predict into the future
-        initialFetchDays = 365 * 2 # Fetch ample history initially (e.g., 2 years)
-        # -------------------
-        
-        # Get the list of top coins
-        coins = ['BTC', 'ETH', 'XRP', 'BNB', 'SOL', 'DOGE', 'TRX', 'ADA']
-        
-        for cryptoCoin in coins:
-            print(f"\n\n{'='*50}")
-            print(f"Running prediction model for {cryptoCoin}")
-            print(f"{'='*50}\n")
-            
-            predictionModel = PredictionModel()
-            results = predictionModel.runEverything(cryptoCoin, forcastDays, initialFetchDays)
-            
-            print("\n--- Final Results Summary for", cryptoCoin, "---")
-            
-            # Access config values from the results dictionary
-            fc_days = results.get('forcastDays', 'N/A')
+    # --- Configuration ---
+    forcastDays = 7   # Days to predict into the future
+    initialFetchDays = 365 * 2 # Fetch ample history initially (e.g., 2 years)
+    # -------------------
     
-            print(f"Model used: LSTM")
-            print("LSTM Model Metrics:")
-            lstm_metrics = results.get('lstm_results', {}).get('metrics', {})
-            for metric, value in lstm_metrics.items():
-                print(f"  {metric.upper()}: {value:.4f}")
-                
-            # Add metrics evaluation
-            r2 = lstm_metrics.get('r2', 0)
-            mape = lstm_metrics.get('mape', 0)
-            print("\nMetrics Evaluation:")
-            if r2 > 0.5:
-                print(f"  R² of {r2:.4f} shows the model has moderate predictive power")
-            else:
-                print(f"  R² of {r2:.4f} suggests the model has limited predictive power")
-                
-            if mape < 5:
-                print(f"  MAPE of {mape:.4f}% indicates relatively accurate predictions")
-            elif mape < 10:
-                print(f"  MAPE of {mape:.4f}% indicates acceptable prediction accuracy")
-            else:
-                print(f"  MAPE of {mape:.4f}% indicates high prediction errors")
+    # Get the list of top coins
     
-            print(f"Final {fc_days}-day Predictions:")
-            print(results.get('predictions', pd.DataFrame()))
-            
-            # Print confirmation that JSON contains benchmarks
-            print(f"\nJSON export includes full model benchmarking metrics")
-            
-    except ValueError as ve:
-        print(f"\n--- Execution Failed (ValueError) ---")
-        print(ve)
-    except Exception as e:
-        print(f"\n--- Execution Failed (Unexpected Error) ---")
-        print(f"Error type: {type(e).__name__}")
-        print(f"Error details: {e}")
-        import traceback
-        traceback.print_exc()
+    predictionModel = PredictionModel(SHOW_LOGS=True)
+    coinData = predictionModel.runModelForEveryCrypto(forcastDays, initialFetchDays)
+    print(coinData)

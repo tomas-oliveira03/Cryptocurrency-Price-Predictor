@@ -5,16 +5,17 @@ from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from Services.DataAnalysis.SentimentAnalysis import SentimentAnalysis
 from Agents.utils.messageHandler import sendMessage
+from Services.Notifications.Notifier import Notifications
 
 # FOR DEBUGGING ONLY
-AGENT_NAME = f"\033[32m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
+AGENT_NAME = f"\033[38;5;51m[{os.path.splitext(os.path.basename(__file__))[0]}]\033[0m"
 
-class NotificationsAgent(Agent):
+class NotifierAgent(Agent):
     
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        # self.sentimentAnalysis = SentimentAnalysis(SHOW_LOGS=False)
+        self.notifications = Notifications(SHOW_LOGS=False)
         self.queue = asyncio.Queue()
             
 
@@ -45,6 +46,7 @@ class NotificationsAgent(Agent):
                     return
 
                 print(f"{AGENT_NAME} Processing payload: {payload.toString()}")
+                await self.agent.notifications.checkNewPossibleNotifications(allCryptoPrices)
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
@@ -57,4 +59,3 @@ class NotificationsAgent(Agent):
         print(f"{AGENT_NAME} Starting...")
         self.add_behaviour(self.ReceiveRequestBehav())
         self.add_behaviour(self.ProcessingQueueBehav())
-        

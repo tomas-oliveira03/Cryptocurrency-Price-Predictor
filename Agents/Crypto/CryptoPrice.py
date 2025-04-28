@@ -55,7 +55,7 @@ class CryptoPriceAgent(Agent):
                 
                 print(f"{AGENT_NAME} Sending coin information to NotifierAgent...")
                 self.agent.priceAlert.setAllCryptoPrices(coinsInfo)
-                await sendMessage(self, "notificationsAgent", "price_alert", self.agent.priceAlert)
+                await sendMessage(self, "notifierAgent", "price_alert", self.agent.priceAlert)
                 self.agent.priceAlert.clearCryptoPrices()
                 
             except Exception as e:
