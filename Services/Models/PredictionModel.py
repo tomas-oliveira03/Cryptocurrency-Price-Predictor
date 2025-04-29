@@ -59,7 +59,7 @@ class PredictionModel:
 
     def runModelForCrypto(self, cryptoCoin, forcastDays, initialFetchDays):
         agentName=f"\033[38;5;88m[PredictionModel]\033[0m"
-        print(f"{agentName} Running prediction model for crypto coin: {cryptoCoin} ...")
+        if self.SHOW_LOGS: print(f"{agentName} Running prediction model for crypto coin: {cryptoCoin}")
         
         self.setSeeding(42)
         
