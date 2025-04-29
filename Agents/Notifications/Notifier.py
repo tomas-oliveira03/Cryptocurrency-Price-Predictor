@@ -15,7 +15,7 @@ class NotifierAgent(Agent):
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.notifications = Notifications(SHOW_LOGS=False)
+        self.notifications = Notifications(SHOW_LOGS=True)
         self.queue = asyncio.Queue()
             
 
@@ -46,7 +46,7 @@ class NotifierAgent(Agent):
                     return
 
                 print(f"{AGENT_NAME} Processing payload: {payload.toString()}")
-                await self.agent.notifications.checkNewPossibleNotifications(allCryptoPrices)
+                self.agent.notifications.checkNewPossibleNotificationsForAllCoins(allCryptoPrices)
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")

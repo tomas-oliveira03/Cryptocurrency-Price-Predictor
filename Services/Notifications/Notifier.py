@@ -26,8 +26,12 @@ class Notifications:
         self.usersDB = mongoClient['ASM-Users'].get_collection('users', codec_options=CodecOptions(tz_aware=True))
         self.notificationsDB = mongoClient['ASM-Users'].get_collection('notifications', codec_options=CodecOptions(tz_aware=True))
 
+    def checkNewPossibleNotificationsForAllCoins(self, allCoinsData):
+        for coinData in allCoinsData:
+            self.checkNewPossibleNotificationsForCoin(coinData)
 
-    def checkNewPossibleNotifications(self, cryptoData):
+
+    def checkNewPossibleNotificationsForCoin(self, cryptoData):
         # Step 1: Query active notifications matching the cryptoCurrency and monitoredPriceType
         notificationsCursor = self.notificationsDB.find({
             "isActive": True,
@@ -104,10 +108,10 @@ class Notifications:
 if __name__ == "__main__":
     notifications = Notifications()
     
-    cryptoData = {
+    cryptoData = [{
         "coin": "BTC",
         "price": 2,
         "monitoredPriceType": "PREDICTED"
-    }
+    }]
     
-    notifications.checkNewPossibleNotifications(cryptoData)
+    notifications.checkNewPossibleNotificationsForAllCoins(cryptoData)
