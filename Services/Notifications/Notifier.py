@@ -60,8 +60,20 @@ class Notifications:
             if alertCondition == "ABOVE" and currentPrice > targetPrice:
                 aboveNotifications.append(notification)
                 
+                # Set the notification as inactive in the database
+                self.notificationsDB.update_one(
+                    {"_id": notification["_id"]},
+                    {"$set": {"isActive": False}}
+                )
+                
             elif alertCondition == "BELOW" and currentPrice < targetPrice:
                 belowNotifications.append(notification)
+                
+                # Set the notification as inactive in the database
+                self.notificationsDB.update_one(
+                    {"_id": notification["_id"]},
+                    {"$set": {"isActive": False}}
+                )
                 
         if self.SHOW_LOGS:
             print(f"Above Notifications to trigger: {aboveNotifications}")
