@@ -15,7 +15,7 @@ class NotifierAgent(Agent):
     def __init__(self, jid, password, spadeDomain):
         super().__init__(jid, password)
         self.spadeDomain = spadeDomain
-        self.notifications = Notifications(SHOW_LOGS=True)
+        self.notifications = Notifications(SHOW_LOGS=False)
         self.queue = asyncio.Queue()
             
 
@@ -45,8 +45,7 @@ class NotifierAgent(Agent):
                     print(f"{AGENT_NAME} \033[91mERROR\033[0m Invalid payload arguments.")
                     return
 
-                print(f"{AGENT_NAME} Processing payload: {payload.toString()}")
-                self.agent.notifications.checkNewPossibleNotificationsForAllCoins(allCryptoPrices)
+                # self.agent.notifications.checkNewPossibleNotificationsForAllCoins(allCryptoPrices)
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
