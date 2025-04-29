@@ -87,8 +87,8 @@ def trainLstmModel(features_df, target_column='close', forecast_days=1, test_siz
         verbose=1 if SHOW_LOGS else 0
     )
     
-    # Evaluate the model
-    y_pred = model.predict(X_test).flatten()
+    # Evaluate the model - Add verbose=0 to suppress progress bar
+    y_pred = model.predict(X_test, verbose=0).flatten()
     
     # Convert predictions back to original scale for interpretable metrics
     y_test_orig = target_scaler.inverse_transform(y_test.reshape(-1, 1)).flatten()
@@ -164,8 +164,7 @@ def predictWithLstm(model_results, features_df, days=5, SHOW_LOGS=True):
         # Reshape for LSTM input [samples, time steps, features]
         seq_reshape = prediction_sequence.reshape(1, seq_length, len(feature_names))
         
-        # Predict
-        scaled_pred = model.predict(seq_reshape, verbose=1 if SHOW_LOGS else 0)[0][0]
+        scaled_pred = model.predict(seq_reshape, verbose=0)[0][0]
         
         # Convert back to original scale
         prediction = target_scaler.inverse_transform([[scaled_pred]])[0][0]

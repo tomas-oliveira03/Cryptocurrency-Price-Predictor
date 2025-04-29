@@ -59,7 +59,7 @@ class PredictionModel:
 
     def runModelForCrypto(self, cryptoCoin, forcastDays, initialFetchDays):
         agentName=f"\033[38;5;88m[PredictionModel]\033[0m"
-        print(f"{agentName} Running prediction model for crypto coin:", cryptoCoin)
+        print(f"{agentName} Running prediction model for crypto coin: {cryptoCoin} ...")
         
         self.setSeeding(42)
         
@@ -214,13 +214,10 @@ class PredictionModel:
 
 if __name__ == "__main__":
 
-    # --- Configuration ---
     forcastDays = 7   # Days to predict into the future
     initialFetchDays = 365 * 2 # Fetch ample history initially (e.g., 2 years)
-    # -------------------
     
     # Get the list of top coins
-    
-    predictionModel = PredictionModel(SHOW_LOGS=True)
+    predictionModel = PredictionModel()
     coinData = predictionModel.runModelForEveryCrypto(forcastDays, initialFetchDays)
     print(coinData)
