@@ -83,7 +83,7 @@ def trainLstmModel(features_df, target_column='close', forecast_days=1, test_siz
         batch_size=32,
         validation_split=0.1,
         callbacks=[early_stop],
-        verbose=1
+        verbose=0
     )
     
     # Evaluate the model
@@ -164,7 +164,7 @@ def predictWithLstm(model_results, features_df, days=5):
         seq_reshape = prediction_sequence.reshape(1, seq_length, len(feature_names))
         
         # Predict
-        scaled_pred = model.predict(seq_reshape)[0][0]
+        scaled_pred = model.predict(seq_reshape, verbose=0)[0][0]
         
         # Convert back to original scale
         prediction = target_scaler.inverse_transform([[scaled_pred]])[0][0]
