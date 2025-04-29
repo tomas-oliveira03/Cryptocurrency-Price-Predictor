@@ -20,7 +20,6 @@ def createSequences(X, y, seq_length):
 
 # Train an LSTM model for price prediction
 def trainLstmModel(features_df, target_column='close', forecast_days=1, test_size=0.2, seq_length=10):
-    print(f"\nTraining LSTM model (target shifted by {forecast_days} day(s))...")
     
     # Create target variable (shifted price)
     df = features_df.copy()
@@ -96,7 +95,6 @@ def trainLstmModel(features_df, target_column='close', forecast_days=1, test_siz
     
     # Ensure the length of dates matches the predictions
     if len(test_dates_for_lstm) != len(y_test_orig):
-        print(f"Warning: Length mismatch between LSTM test dates ({len(test_dates_for_lstm)}) and predictions ({len(y_test_orig)}). Adjusting dates.")
         test_dates_for_lstm = test_dates_for_lstm[:len(y_test_orig)]
 
     mse_orig = mean_squared_error(y_test_orig, y_pred_orig)

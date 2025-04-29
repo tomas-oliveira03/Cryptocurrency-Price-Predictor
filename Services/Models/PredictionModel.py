@@ -46,26 +46,29 @@ class PredictionModel:
                 coinData = self.runModelForCrypto(coin, forcastDays, initialFetchDays)
                 allCoinsData.append(coinData)
             except Exception as e:
-                print(f"Error processing {coin}: {e}")
+                if self.SHOW_LOGS: print(f"Error processing {coin}: {e}")
                 continue
             
         return allCoinsData 
         
 
     def runModelForCrypto(self, cryptoCoin, forcastDays, initialFetchDays):
+        agentName=f"\033[38;5;88m[PredictionModel]\033[0m"
+        print(f"{agentName} Running prediction model for crypto coin:", cryptoCoin)
+        
         self.setSeeding(42)
         
         # Step 1: Get raw data for prediction
         rawData = getDataForPrediction(self, cryptoCoin=cryptoCoin, numberOfPastDaysOfData=initialFetchDays)
         
         # Step 2: Preprocess the data
-        processedData = preprocessData(self, rawData)
+        processedData = preprocessData(self, rawData, self.SHOW_LOGS)
         
         # Step 3: Engineer features
         featuresDF = engineFeatures(self, processedData)
         
         # Step 4: Train LSTM model (Initial training)
-        print("\n--- Training Initial LSTM Model ---")
+        if self.SHOW_LOGS: print("\n--- Training Initial LSTM Model ---")
         
         # Use a smaller sequence length if dataset is smaller
         seq_length = min(10, len(featuresDF) // 5)  # Adjust sequence length based on data size
@@ -80,7 +83,7 @@ class PredictionModel:
         )            
             
         # Step 5: Retrain LSTM on full dataset for final model
-        print("\n--- Retraining LSTM Model on Full Historical Data ---")
+        if self.SHOW_LOGS: print("\n--- Retraining LSTM Model on Full Historical Data ---")
         
         # Retrain LSTM on the entire dataset
         retrain_seq_length = min(10, len(featuresDF) // 10)
@@ -93,10 +96,10 @@ class PredictionModel:
             test_size=0.01,   # Minimal test set for final training
             seq_length=retrain_seq_length
         )
-        print("LSTM retrained successfully on full data.")
+        if self.SHOW_LOGS: print("LSTM retrained successfully on full data.")
 
         # Step 6: Predict Future with LSTM
-        print(f"\n--- Predicting Next {forcastDays} Days using LSTM Model ---")
+        if self.SHOW_LOGS: print(f"\n--- Predicting Next {forcastDays} Days using LSTM Model ---")
 
         future_predictions = predictWithLstm(
             final_lstm_model,
@@ -106,18 +109,18 @@ class PredictionModel:
 
         # Step 7: Output Results
         # Print detailed prediction information
-        print("\nDetailed Future Price Predictions:")
+        if self.SHOW_LOGS: print("\nDetailed Future Price Predictions:")
         if not future_predictions.empty:
             for date, row in future_predictions.iterrows():
-                print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f}")
+                if self.SHOW_LOGS: print(f"  {date.strftime('%Y-%m-%d')}: ${row['predicted_price']:.2f}")
             
             # Calculate overall prediction trend
             first_pred = future_predictions['predicted_price'].iloc[0]
             last_pred = future_predictions['predicted_price'].iloc[-1]
             total_change_pct = ((last_pred - first_pred) / first_pred) * 100 if first_pred != 0 else 0
-            print(f"\nOverall {forcastDays}-day prediction trend: {total_change_pct:+.2f}%")
+            if self.SHOW_LOGS: print(f"\nOverall {forcastDays}-day prediction trend: {total_change_pct:+.2f}%")
         else:
-            print("  No future predictions were generated.")
+            if self.SHOW_LOGS: print("  No future predictions were generated.")
 
         historical_price_data = [
             {"date": date.strftime('%Y-%m-%d'), "price": price}
@@ -188,9 +191,9 @@ class PredictionModel:
 
             # Insert the content into the predictionsDB collection
             self.predictionsDB.insert_one(data)
-            print(f"Content successfully saved to MongoDB with timestamp {data['date']}")
+            if self.SHOW_LOGS: print(f"Content successfully saved to MongoDB with timestamp {data['date']}")
         except Exception as e:
-            print(f"Failed to save content to MongoDB: {e}")
+            if self.SHOW_LOGS: print(f"Failed to save content to MongoDB: {e}")
             raise
 
 
@@ -199,7 +202,6 @@ class PredictionModel:
         random.seed(seed)
         np.random.seed(seed)
         tf.random.set_seed(seed)
-        print(f"Seeds set to {seed} for random, numpy, and tensorflow (if available).")
 
 
 if __name__ == "__main__":

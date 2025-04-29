@@ -1,6 +1,6 @@
 import pandas as pd
 
-def preprocessData(self, rawData):
+def preprocessData(self, rawData, SHOW_LOGS):
     processedData = {}
     
     # Process price data
@@ -79,7 +79,7 @@ def preprocessData(self, rawData):
                 # Drop the original sentiment column as we've extracted what we need
                 mergedSentimentDF.drop('sentiment', axis=1, inplace=True)
             except Exception as e:
-                print(f"Error extracting sentiment: {e}")
+                if SHOW_LOGS: print(f"Error extracting sentiment: {e}")
         
         # Sort by date
         mergedSentimentDF.sort_values('date', inplace=True)
