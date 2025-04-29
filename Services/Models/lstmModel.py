@@ -3,7 +3,8 @@ import pandas as pd
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.callbacks import EarlyStopping
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from tensorflow.keras.layers import Input
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
@@ -63,15 +64,15 @@ def trainLstmModel(features_df, target_column='close', forecast_days=1, test_siz
     
     # Define LSTM architecture
     model = Sequential([
-        LSTM(100, activation='tanh', return_sequences=True, 
-             input_shape=(X_train.shape[1], X_train.shape[2])),
+        Input(shape=(X_train.shape[1], X_train.shape[2])),
+        LSTM(100, activation='tanh', return_sequences=True),
         Dropout(0.3),
         LSTM(50, activation='tanh', return_sequences=False),
         Dropout(0.3),
         Dense(25, activation='relu'),
         Dense(1)
     ])
-    
+        
     model.compile(optimizer='adam', loss='mse')
     
     # Train the model with early stopping
