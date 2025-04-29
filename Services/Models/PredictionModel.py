@@ -4,11 +4,14 @@ import pandas as pd
 import numpy as np
 from bson import CodecOptions
 from pymongo import MongoClient
-import json
 import random
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 import tensorflow as tf
+tf.get_logger().setLevel('ERROR')   
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from Models.fetchData import getDataForPrediction
 from Models.preProcessor import preprocessData
 from Models.engineFeatures import engineFeatures
@@ -16,6 +19,7 @@ from Models.lstmModel import trainLstmModel, predictWithLstm
 from Models.benchmark import coinBenchmark
 
 from utils.cryptoCoinsInfo import getTopCoins
+
 
 class PredictionModel:
     def __init__(self, SHOW_LOGS=True):
@@ -52,6 +56,7 @@ class PredictionModel:
         return allCoinsData 
         
 
+
     def runModelForCrypto(self, cryptoCoin, forcastDays, initialFetchDays):
         agentName=f"\033[38;5;88m[PredictionModel]\033[0m"
         print(f"{agentName} Running prediction model for crypto coin:", cryptoCoin)
@@ -79,7 +84,8 @@ class PredictionModel:
             target_column='close',
             forecast_days=1, # Typically train LSTM for 1-step ahead prediction
             test_size=0.2,   # Use a portion for validation during training
-            seq_length=seq_length
+            seq_length=seq_length,
+            SHOW_LOGS=self.SHOW_LOGS
         )            
             
         # Step 5: Retrain LSTM on full dataset for final model
@@ -94,7 +100,8 @@ class PredictionModel:
             target_column='close',
             forecast_days=1,  # Still 1-step ahead prediction
             test_size=0.01,   # Minimal test set for final training
-            seq_length=retrain_seq_length
+            seq_length=retrain_seq_length,
+            SHOW_LOGS=self.SHOW_LOGS
         )
         if self.SHOW_LOGS: print("LSTM retrained successfully on full data.")
 
@@ -104,7 +111,8 @@ class PredictionModel:
         future_predictions = predictWithLstm(
             final_lstm_model,
             featuresDF,
-            days=forcastDays
+            days=forcastDays,
+            SHOW_LOGS=self.SHOW_LOGS
         )
 
         # Step 7: Output Results
