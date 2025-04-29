@@ -98,7 +98,7 @@ class Notifications:
                 currentPrice=currentPrice,
                 percentageChange=percentageChange,
                 priceDifferential=priceDifferential,
-                recipientEmail="tumabarbosa@gmail.com",
+                recipientEmail=userEmail,
                 alertCondition=alertCondition,
                 targetPrice=targetPrice,
                 monitoredPriceType=monitoredPriceType
