@@ -45,7 +45,7 @@ class NotifierAgent(Agent):
                     print(f"{AGENT_NAME} \033[91mERROR\033[0m Invalid payload arguments.")
                     return
 
-                # self.agent.notifications.checkNewPossibleNotificationsForAllCoins(allCryptoPrices)
+                self.agent.notifications.checkNewPossibleNotificationsForAllCoins(allCryptoPrices)
 
             except Exception as e:
                 print(f"{AGENT_NAME} \033[91mERROR\033[0m {e}")
