@@ -211,13 +211,3 @@ class PredictionModel:
         np.random.seed(seed)
         tf.random.set_seed(seed)
 
-
-if __name__ == "__main__":
-
-    forcastDays = 7   # Days to predict into the future
-    initialFetchDays = 365 * 2 # Fetch ample history initially (e.g., 2 years)
-    
-    # Get the list of top coins
-    predictionModel = PredictionModel()
-    coinData = predictionModel.runModelForEveryCrypto(forcastDays, initialFetchDays)
-    print(coinData)

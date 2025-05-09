@@ -56,7 +56,3 @@ class FearGreedIndex:
             
         return numberOfInsertions
        
-       
-if __name__ == "__main__":
-    fgIndex = FearGreedIndex()
-    fgIndex.fetchFearGreedIndexData()

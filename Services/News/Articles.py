@@ -81,7 +81,3 @@ class Articles:
         except Exception:
             return None
         
-        
-if __name__ == "__main__":
-    articles = Articles()
-    articles.fetchAllWebsiteArticlesContent()

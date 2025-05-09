@@ -103,7 +103,3 @@ class CryptoPrice:
             
         return numberOfInsertions
 
-
-if __name__ == "__main__":
-    detailedCryptoData = CryptoPrice()
-    data = detailedCryptoData.fetchTopCoinsPrices()

@@ -109,20 +109,10 @@ class Notifications:
                 currentPrice=currentPrice,
                 percentageChange=percentageChange,
                 priceDifferential=priceDifferential,
-                recipientEmail="tumabarbosa@gmail.com",
+                recipientEmail=userEmail,
                 alertCondition=alertCondition,
                 targetPrice=targetPrice,
                 monitoredPriceType=monitoredPriceType
             )
 
 
-if __name__ == "__main__":
-    notifications = Notifications()
-    
-    cryptoData = [{
-        "coin": "BTC",
-        "price": 2,
-        "monitoredPriceType": "PREDICTED"
-    }]
-    
-    notifications.checkNewPossibleNotificationsForAllCoins(cryptoData)

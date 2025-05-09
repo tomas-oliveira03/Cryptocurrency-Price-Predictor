@@ -105,8 +105,3 @@ class CoinIdentifier:
         if operations:
             mongoCollection.bulk_write(operations)
 
-
-if __name__ == "__main__":
-    sentimentAnalysis = CoinIdentifier()
-    sentimentAnalysis.idetifyCoinsForAllCollections("reddit")
-    sentimentAnalysis.idetifyCoinsForAllCollections("articles")

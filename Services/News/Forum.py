@@ -158,7 +158,3 @@ class Forum:
         
         return data["results"]
 
-
-if __name__ == "__main__":
-    forum = Forum()
-    forum.getAllInformation()

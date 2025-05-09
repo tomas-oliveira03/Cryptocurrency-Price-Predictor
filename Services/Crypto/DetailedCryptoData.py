@@ -107,8 +107,3 @@ class DetailedCryptoData:
             numberOfInsertions = result.upserted_count        
             
         return numberOfInsertions
-
-
-if __name__ == "__main__":
-    cryptoData = DetailedCryptoData()
-    cryptoData.fetchCoinsDataFullAnalysis()

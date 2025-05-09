@@ -150,8 +150,3 @@ class RedditScraper:
   
     def cleanText(self, text):
         return text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ').strip()
-
-
-if __name__ == "__main__":
-    redditScraper = RedditScraper()
-    redditScraper.processAllSubreddits()
