@@ -8,8 +8,6 @@ import os
 
 class FearGreedIndex:
     def __init__(self, SHOW_LOGS=True):
-        load_dotenv()
-        
         self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         if not mongoDBURI:

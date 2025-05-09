@@ -13,8 +13,6 @@ from utils.cryptoCoinsInfo import getTickerToFullNameMap, getFullNameToTickerMap
 
 class CryptoPrice:
     def __init__(self, SHOW_LOGS=True):
-        load_dotenv()
-        
         self.SHOW_LOGS=SHOW_LOGS
         self.currencySymbol = "usd" 
         

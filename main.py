@@ -20,9 +20,10 @@ from Agents.Orchestrators.CryptoOrchestrator import CryptoOrchestratorAgent
 from Agents.Orchestrators.NewsOrchestrator import NewsOrchestratorAgent
 from Agents.DataAnalysis.SentimentAnalysis import SentimentAnalysisAgent
 
+from dotenv import load_dotenv, dotenv_values
 async def main():
     # Your Spade agent startup code
-    load_dotenv()
+    load_dotenv(override=True)
     SPADE_DOMAIN = os.getenv("SPADE_DOMAIN")
     SPADE_PASSWORD = os.getenv("SPADE_PASSWORD")
     

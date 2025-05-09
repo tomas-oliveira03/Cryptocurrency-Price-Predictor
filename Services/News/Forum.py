@@ -14,8 +14,6 @@ from utils.cryptoCoinsInfo import getTopCoins
 class Forum:
     
     def __init__(self, SHOW_LOGS=True):
-        load_dotenv()
-        
         self.SHOW_LOGS=SHOW_LOGS
         self.cryptoPanicAPIKey = os.getenv("CRYPTOPANIC_API_KEY")
         if not self.cryptoPanicAPIKey:

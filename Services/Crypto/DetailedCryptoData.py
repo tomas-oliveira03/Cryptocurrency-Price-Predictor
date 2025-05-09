@@ -12,8 +12,6 @@ from utils.cryptoCoinsInfo import getTopCoins
 
 class DetailedCryptoData:
     def __init__(self, SHOW_LOGS=True):
-        load_dotenv()
-        
         self.SHOW_LOGS=SHOW_LOGS
         self.coinDeskAPIKey = os.getenv("COINDESK_API_KEY")
         self.currencySymbol = "USD" 

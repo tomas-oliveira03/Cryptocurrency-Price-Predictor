@@ -8,7 +8,7 @@ from webSockets.WebSocketManager import WebSocketManager
 
 def create_app():
     # Load environment variables
-    load_dotenv()
+    load_dotenv(override=True)
     
     app = Flask(__name__)
 

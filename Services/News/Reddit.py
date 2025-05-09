@@ -8,8 +8,6 @@ from bson.codec_options import CodecOptions
 class RedditScraper:
     
     def __init__(self, SHOW_LOGS=True):
-        load_dotenv()
-        
         self.SHOW_LOGS=SHOW_LOGS
         self.redditClientID = os.getenv("REDDIT_CLIENT_ID")
         self.redditSecretKey = os.getenv("REDDIT_SECRET_KEY")

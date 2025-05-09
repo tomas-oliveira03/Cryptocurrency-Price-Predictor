@@ -10,7 +10,6 @@ from Notifications.mailer import sendCryptoEmail
 class Notifications:
     
     def __init__(self, SHOW_LOGS=True):
-        load_dotenv()
         self.SHOW_LOGS=SHOW_LOGS
         mongoDBURI = os.getenv("MONGODB_URI")
         
@@ -110,7 +109,7 @@ class Notifications:
                 currentPrice=currentPrice,
                 percentageChange=percentageChange,
                 priceDifferential=priceDifferential,
-                recipientEmail=userEmail,
+                recipientEmail="tumabarbosa@gmail.com",
                 alertCondition=alertCondition,
                 targetPrice=targetPrice,
                 monitoredPriceType=monitoredPriceType
