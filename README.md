@@ -1,13 +1,13 @@
 # Cryptocurrency Price Predictor
 
-This repository contains a project that implements a multiagent system enhanced with Artificial Intelligence for cryptocurrency market analysis and price prediction. It uses a Python backend to manage a society of agents that collect, analyze, and report on cryptocurrency data. A web-based frontend, built with Node.js, provides a user interface to visualize the market analysis, agent activities, and system state. The backend communicates with a MongoDB database to persist data.
+This repository contains a project that implements a multiagent system enhanced with Artificial Intelligence for cryptocurrency market analysis and price prediction. It particularly studies the influence that social media and news forums have on cryptocurrency prices. It uses a Python backend to manage a society of agents that collect, analyze, and report on cryptocurrency data. A web-based frontend, built with Node.js, provides a user interface to visualize the market analysis, agent activities, and system state. The backend communicates with a MongoDB database to persist data.
 
 ## Project Overview
 
 The core of this project is a multiagent system designed to perform real-time analysis of the cryptocurrency market. Different agents are assigned specialized tasks:
 
--   **Data Collection Agents**: These agents are responsible for gathering real-time and historical data from various sources, such as cryptocurrency exchanges and financial news APIs.
--   **Analysis Agents**: These agents process the collected data. They perform technical analysis (e.g., calculating indicators like RSI, MACD) and sentiment analysis on news articles to gauge market mood.
+-   **Data Collection Agents**: These agents are responsible for gathering real-time and historical data from various sources, such as cryptocurrency exchanges, social media, and financial news APIs.
+-   **Analysis Agents**: These agents process the collected data. They perform technical analysis (e.g., calculating indicators like RSI, MACD) and sentiment analysis on news articles and social media posts to gauge market mood.
 -   **Decision Agents**: Based on the analyses, these agents formulate insights or potential trading signals.
 -   **User Interface Agent**: This agent acts as a bridge between the user and the system, managing user preferences and displaying tailored information on the frontend.
 
@@ -33,8 +33,8 @@ Follow these steps to get the project running on your local machine.
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/tomas-oliveira03/ASM.git
-cd ASM
+git clone https://github.com/tomas-oliveira03/Cryptocurrency-Price-Predictor.git
+cd Cryptocurrency-Price-Predictor
 ```
 
 ### 2. Backend Setup
